@@ -1,0 +1,17 @@
+Hanse Cast - credits and resource notice
+
+Addon author: Hanse. Community addon; no Blizzard endorsement is claimed.
+Custom textures were prepared for this project using a mixture of AI-assisted
+artwork and local processing. Local source masters, prompts and build evidence
+are retained in the development project. This notice is not a claim of exclusive
+rights over unprotectable AI output or third-party material.
+
+Optional Alliance/Horde emblems, standard fonts and spell icons refer to resources
+provided by the installed WoW client. They are not copied out of the client into
+this addon archive. Blizzard and other third-party rights remain with their owners.
+
+Historical reference for native emblem paths:
+https://github.com/tekkub/wow-ui-source/blob/61cc326fc2ab8ad8d2784ccf4bd0c8c6a80ae446/FrameXML/PlayerFrame.lua
+
+No third-party runtime library or bundled font/audio file is included.
+Software-composed previews are not in-game screenshots and must be labelled.

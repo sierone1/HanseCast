@@ -1,0 +1,27 @@
+## Interface: 16001
+## Title: Hanse Cast
+## IconTexture: Interface\AddOns\HanseCast\Media\Icon.tga
+## Notes: Custom cast bars with animated styles, a separate GCD indicator and profiles.
+## Notes-deDE: Animierte Zauberleisten mit eigener Optik, separater GCD-Anzeige und Profilen.
+## X-License: All Rights Reserved
+## Author: Hanse
+## Version: 0.9.1
+## SavedVariables: HanseCastDB
+
+Core.lua
+Locale.lua
+Profiles.lua
+Compatibility.lua
+SpellVisuals.lua
+CastFeedback.lua
+GCD.lua
+Themes.lua
+Effects.lua
+UnitBars.lua
+Comfort.lua
+View.lua
+FeedbackPreview.lua
+Options.lua
+Settings.lua
+Blizzard.lua
+App.lua

@@ -1,0 +1,17 @@
+# Publish only the addon and reviewed public documentation.
+/*
+!/.gitignore
+!/.gitattributes
+!/README.md
+!/LICENSE.txt
+!/CHANGELOG.md
+!/HanseCast/
+!/docs/
+/docs/*
+!/docs/public/
+# Keep local machine files and secrets out of the public repository.
+**/__pycache__/
+**/.env
+**/.env.*
+**/Thumbs.db
+**/desktop.ini
