@@ -7,7 +7,7 @@ local specs={
  element={default='frost'},identity={'neutral','class',default='class'},faction={'none','alliance','horde',default='none'},
  language={'auto','deDE','enUS',default='auto'},font={'default','modern',default='default'},
  timeFormat={'remaining','elapsed','both','hidden',default='remaining'},iconPosition={'hidden','left','right',default='hidden'},
- gcd={boolean=true,default=true},hideBlizzard={boolean=true,default=false},finishCue={boolean=true,default=true},
+ gcd={boolean=true,default=true},hideBlizzard={boolean=true,default=false},hideBlizzardFocus={boolean=true,default=true},hideBlizzardTarget={boolean=true,default=true},finishCue={boolean=true,default=true},
  autoSpellVisual={boolean=true,default=false},latency={boolean=true,default=false},channelTicks={boolean=true,default=false},
  channelTickCount={2,10,5},
 }

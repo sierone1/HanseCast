@@ -35,6 +35,7 @@ local function Result(h,ok,reason)
  Status(h,ok and S('Erledigt.','Done.') or messages[reason] or S('Ungültige Daten. Keine Änderung.','Invalid data. Nothing changed.'))
 end
 function HC.SetMenuValue(key,value,unit)
+ if HC.unitBarsInDevelopment and (unit or key=='hideBlizzardTarget' or key=='hideBlizzardFocus') then return false,'in-development' end
  if not Allowed() then return false,'combat' end
  local specKey=unit and ('unitBars.'..unit..'.'..key) or key
  if not HC.ValidProfileValue or not HC.ValidProfileValue(specKey,value) then return false,'value' end
@@ -96,6 +97,7 @@ local function ClearImport(h)
  h.checkedText=nil;h.checkedProfile=nil;h.checkedRevision=nil;h.checkedDB=nil
 end
 local function SelectPage(h,key)
+ if HC.unitBarsInDevelopment and Page(key)=='units' then return end
  DiscardEdits(h)
  ClosePopup(h);h.confirm:Hide();h.page=Page(key);HC.menuPage=h.page;h.message=nil
  h.scroll:SetVerticalScroll(0);HC.UpdateOptions()
@@ -245,8 +247,8 @@ local function Build(h)
  Action(h,'layout','move',S('Verschieben','Move'),S('Linke Maustaste zum Ziehen. Fertig sperrt die Leiste wieder.','Drag with the left mouse button. Done locks the bar again.'),S('Im Spiel positionieren','Position in game'),function() HC.StartMenuPreview(h,'player') end)
  Action(h,'layout','resetPosition',S('Nur Position zurücksetzen','Reset position only'),S('Gestaltung und andere Profile bleiben erhalten.','Appearance and other profiles are preserved.'),S('Spielerposition zurücksetzen','Reset player position'),function() HC.SetMenuValue('x',0);HC.SetMenuValue('y',-180) end)
 
- Field(h,'comfort','font','Schrift','',{{'default','Standard'},{'modern','Modern'}},'font')
- Number(h,'comfort','fontSize','Schriftgröße',S('Größe der Zauberbeschriftung.','Size of the spell labels.'),'fontSize',10,20,1)
+ Field(h,'comfort','font','Schrift',S('Schrift für die Spielerleiste.','Font for the player bar.'),{{'default','Standard'},{'modern','Modern'}},'font')
+ Number(h,'comfort','fontSize','Schriftgröße',S('Schriftgröße für die Spielerleiste. Die Leistenskalierung wirkt zusätzlich.','Font size for the player bar. Bar scale also applies.'),'fontSize',10,20,1)
  Field(h,'comfort','timeFormat',S('Zeitanzeige','Time display'),'',{{'remaining','Restzeit'},{'elapsed','Verstrichen'},{'both','Beides'},{'hidden','Aus'}},'timeFormat')
  Number(h,'comfort','opacity','Deckkraft',S('Sichtbarkeit der Spielerleiste in Prozent.','Player bar visibility in percent.'),'opacity',20,100,10,100)
  Field(h,'comfort','iconPosition','Zaubersymbol','',{{'hidden','Aus'},{'left','Links'},{'right','Rechts'}},'iconPosition')
@@ -261,7 +263,11 @@ local function Build(h)
   if v~='target' and v~='focus' then return end
   DiscardEdits(h,true);h.unit=v;HC.UpdateOptions()
  end
- Toggle(h,'units','unitEnabled',S('Eigene Leiste aktivieren','Enable custom bar'),S('Blizzards Ziel- und Fokusframes bleiben unverändert.','Blizzard target and focus frames remain unchanged.'),'enabled',true)
+ Toggle(h,'units','unitEnabled',S('Eigene Leiste aktivieren','Enable custom bar'),S('Aktiviert die eigene Zauberleiste. Lebens- und Manabalken bleiben erhalten.','Enables the custom cast bar. Health and power bars remain unchanged.'),'enabled',true)
+ Toggle(h,'units','hideBlizzardFocus',S('Blizzard-Fokusleiste ersetzen','Replace Blizzard focus cast bar'),S('Nur bei ausgewähltem Fokus einstellbar. Verbirgt die Standard-Zauberleiste, solange Hanse den echten Fokuszauber darstellt. Bei fehlenden Daten oder Grafiken bleibt Blizzard verfügbar.','Configurable when Focus is selected. Hides the default cast bar while Hanse displays the actual focus cast. Missing data or artwork keeps Blizzard available.'),'hideBlizzardFocus',false,function() return h.unit=='focus' end)
+ h.controls.hideBlizzardFocus.visible=function() return h.unit=='focus' end
+ Toggle(h,'units','hideBlizzardTarget',S('Blizzard-Zielleiste ersetzen','Replace Blizzard target cast bar'),S('Nur bei ausgewähltem Ziel einstellbar. Verbirgt die Standard-Zauberleiste, solange Hanse den echten Zielzauber darstellt. Bei fehlenden Daten oder Grafiken bleibt Blizzard verfügbar.','Configurable when Target is selected. Hides the default cast bar while Hanse displays the actual target cast. Missing data or artwork keeps Blizzard available.'),'hideBlizzardTarget',false,function() return h.unit=='target' end)
+ h.controls.hideBlizzardTarget.visible=function() return h.unit=='target' end
  Field(h,'units','visibility',S('Anzeigen bei','Show during'),S('Nur zugängliche Zauber; keine dauerhaft leere Leiste.','Only accessible spells; not a permanently empty bar.'),{{'always',S('Innerhalb & außerhalb des Kampfes','In and out of combat')},{'combat','Im Kampf'}},'visibility',true)
  Toggle(h,'units','showIcon','Zaubersymbol','','showIcon',true)
  Field(h,'units','unitFamily',S('Kategorie','Category'),function() return T(S('Spieler-Auswahl: ','Player selection: '))..T((function() for _,v in ipairs(families) do if v[1]==HC.db.family then return v[2] end end end)()) end,function()
@@ -326,6 +332,7 @@ local function Build(h)
 
  Field(h,'help','language','Sprache',S('Im Profil gespeichert. Automatisch folgt der Spielsprache.','Saved in the profile. Automatic follows the game language.'),{{'auto','Automatisch'},{'deDE','Deutsch'},{'enUS','English'}},'language')
  Note(h,'help','guide',S('In vier Schritten starten','Get started in four steps'),S('1. Gestaltung wählen. 2. Größe und Position anpassen. 3. Vorschau beenden. 4. Echten Zauber wirken und Darstellung prüfen.','1. Choose an appearance. 2. Adjust size and position. 3. End preview. 4. Cast a real spell to check the result.'))
+ Note(h,'help','unitDevelopment',S('Ziel & Fokus – in Arbeit','Target & focus – in development'),S('Derzeit deaktiviert. Separate kompakte Leisten sind geplant. Blizzard zeigt Ziel und Fokus weiterhin an.','Currently disabled. Separate compact bars are planned. Blizzard continues to display target and focus.'))
  Note(h,'help','limits',S('Grenzen der Anzeige','Display limitations'),S('Geschützte oder fehlende Daten können die eigene Leiste ausblenden. Keine Empower-Zauber. Kanal-Hilfslinien sind manuell.','Restricted or missing data can hide the custom bar. No empower spells. Channel guides are manual.'))
  Action(h,'help','demo',S('Ereignis-Demo','Event demo'),S('Künstliche Beispiele für Zeitänderung, Abbruch und Unterbrechung.','Artificial examples of timing changes, cancellation and interruption.'),S('Demo starten','Start demo'),function() HC.StartMenuPreview(h,'player','feedback') end)
  Action(h,'help','diagnose',S('Diagnoseinformationen','Diagnostic information'),S('Version und Status im Chat; es werden keine privaten Chatnachrichten gesammelt.','Version and status in chat; does not collect private messages.'),S('Status im Chat anzeigen','Show status in chat'),function() if SlashCmdList.HANSECAST then SlashCmdList.HANSECAST('status') end end)
@@ -418,7 +425,7 @@ function HC.CreateMenuCanvas(parent,native)
   for _,p in pairs(h.pages) do p.used=0 end
   for _,r in ipairs(h.rows) do
    local p=h.pages[r.page];local extra=stack and #r.widgets>0 and r.id~='importText' and 28 or 0
-   local visible=not r.advanced or h.expanded;r:SetShown(visible)
+   local visible=(not r.advanced or h.expanded) and (not r.visible or r.visible());r:SetShown(visible)
    r:ClearAllPoints();r:SetPoint('TOPLEFT',0,-p.used);r:SetPoint('TOPRIGHT',0,-p.used);r:SetHeight(r.baseHeight+extra)
    if visible then p.used=p.used+r.baseHeight+extra end;p:SetHeight(p.used)
    r.title:ClearAllPoints();r.title:SetPoint('TOPLEFT',0,-2)
@@ -455,6 +462,7 @@ end
 function HC.UpdateOptions()
  if updating or not HC.db then return end;updating=true
  for _,h in ipairs(hosts) do
+  if HC.unitBarsInDevelopment and h.page=='units' then h.page='player' end
   if not HC.db.profiles[h.selectedProfile] then h.selectedProfile=HC.db.activeProfile end
   if h.previousActive and (h.previousActive~=HC.db.activeProfile or h.previousRevision~=(HC.profileRevision or 0) or h.previousDB~=HC.db) then
    h.confirm:Hide();ClearImport(h);HC.pendingProfileImport=nil;DiscardEdits(h)
@@ -466,12 +474,13 @@ function HC.UpdateOptions()
   for key,nav in pairs(h.nav) do
    nav.button:SetText((h.page==key and '|cffffd080> |r' or '')..T(nav.text))
    if h.page==key then nav.button:SetBackdropColor(.25,.21,.13,1) else nav.button:SetBackdropColor(.055,.05,.04,.95) end
-   Enable(nav.button,Allowed() and not h.confirm:IsShown())
+   if key=='units' and HC.unitBarsInDevelopment then nav.button:SetText(T(S('Ziel & Fokus\n(in Arbeit)','Target & focus\n(in development)'))) end
+   Enable(nav.button,Allowed() and not h.confirm:IsShown() and not (key=='units' and HC.unitBarsInDevelopment))
   end
   for key,page in pairs(h.pages) do page:SetShown(h.page==key) end;h.content:SetHeight(h.pages[h.page].used)
   for _,r in ipairs(h.rows) do
    r.title:SetText(T(r.titleText));r.help:SetText(T(r.helpText));if r.refresh then r.refresh() end
-   local on=Allowed() and not h.confirm:IsShown() and (not r.enabled or r.enabled());for _,w in ipairs(r.widgets) do Enable(w,on) end
+   local on=Allowed() and not (r.page=='units' and HC.unitBarsInDevelopment) and not h.confirm:IsShown() and (not r.enabled or r.enabled());for _,w in ipairs(r.widgets) do Enable(w,on) end
   end
   h.resize(h:GetWidth())
   local p=h.previewPanel
@@ -519,6 +528,7 @@ function HC.OpenAdvancedOptions()
  for _,h in ipairs(hosts) do h.page='player';h.expanded=true end;HC.UpdateOptions()
 end
 function HC.StartMenuPreview(h,unit,mode)
+ if HC.unitBarsInDevelopment and unit~='player' then return false end
  if not Allowed() then return end;HC.EndMenuPreview(false)
  HC.menuPreviewHost=h;HC.menuPreviewTransition=true
  if h.native and SettingsPanel and type(HideUIPanel)=='function' then HideUIPanel(SettingsPanel) else h:Hide() end

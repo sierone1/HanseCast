@@ -149,7 +149,7 @@ end
 local function Status()
     local version, build, _, interface=GetBuildInfo()
     HC.Print("Version "..HC.version.." | Client "..version.." / "..build.." / "..interface)
-    HC.Print(L("Zauber: ")..(HC.lastReason or L("unbekannt")).." | GCD: "..(HC.gcdReason or L("unbekannt"))..
+    HC.Print(L("Spieler").." | "..L("Zauber: ")..(HC.lastReason or L("unbekannt")).." | GCD: "..(HC.gcdReason or L("unbekannt"))..
         L(" | geschützt: ")..HC.stats.restricted..L(" | API-Fehler: ")..HC.stats.apiErrors..
         L(" | fehlende Events: ")..HC.stats.unknownEvents)
     HC.Print(L("Optik: ")..HC.db.family.." / "..HC.db.element.." / "..HC.db.identity.." | Blizzard: "..L(HC.blizzardStatus or "unverändert"))
@@ -169,6 +169,9 @@ local function Status()
     end
     HC.Print(L("GCD-Prüfung: ")..HC.GetGCDDiagnostic())
     HC.Print(L("Addon-Einstellungsmenü: ")..(HC.settingsStatus or L("unbekannt")))
+    if HC.PrintUnitStatus then HC.PrintUnitStatus() end
+    HC.Print(L("Blizzard-Ziel: ")..L(HC.blizzardTargetStatus or "unverändert"))
+    HC.Print(L("Blizzard-Fokus: ")..L(HC.blizzardFocusStatus or "unverändert"))
     HC.Print("Position "..math.floor(HC.db.x)..", "..math.floor(HC.db.y)..
         L(" | gespeicherte Starts: ")..(HC.db.launches or 1)..L(" (inkl. /reload)"))
     local quartz=C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("Quartz")
@@ -195,9 +198,16 @@ local function Start()
     SlashCmdList.HANSECAST=function(input)
         local command=input:lower():match("^%s*(%S*)")
         if command=="status" then Status()
+        elseif command=="diagnose" then
+            HC.Print("Version "..HC.version)
+            HC.PrintUnitStatus()
+            HC.Print(L("Blizzard-Ziel: ")..L(HC.blizzardTargetStatus or "unverändert"))
+            HC.Print(L("Blizzard-Fokus: ")..L(HC.blizzardFocusStatus or "unverändert"))
         elseif command=="test" then HC.TogglePreview()
         elseif command=="demo" then HC.TogglePreview("feedback")
-        elseif command=="units" and HC.PreviewUnitBars then HC.PreviewUnitBars(not HC.unitBarsPreview)
+        elseif command=="units" and HC.PreviewUnitBars then
+            if HC.unitBarsInDevelopment then HC.Print(L("Ziel & Fokus: in Arbeit – deaktiviert"))
+            else HC.PreviewUnitBars(not HC.unitBarsPreview) end
         else HC.ToggleOptions() end
     end
     HC.Print(HC.version..HC.L(" geladen. /hansecast öffnet die Einstellungen."))
@@ -209,7 +219,8 @@ events:SetScript("OnEvent",function(_, event, ...)
         if name==addonName then
             HC.Register(events,"PLAYER_LOGIN")
             if IsLoggedIn() then Start() end
-        elseif HC.ready then HC.UpdateBlizzard(); HC.RegisterSettings() end
+        elseif HC.ready then HC.UpdateBlizzard(); if HC.UpdateBlizzardFocus then HC.UpdateBlizzardFocus() end
+        if HC.UpdateBlizzardTarget then HC.UpdateBlizzardTarget() end; HC.RegisterSettings() end
         return
     end
     if event=="PLAYER_LOGIN" then Start(); return end

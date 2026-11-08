@@ -1,6 +1,6 @@
 local _, HC = ...
 local function L(text) return HC.L and HC.L(text) or text end
--- Addon-owned target/focus frames only. Blizzard's frames are never modified.
+-- Own rendering; optional native focus suppression lives in Blizzard.lua.
 local units={"target","focus"}
 local labels={target="Ziel",focus="Fokus"}
 local defaults={enabled=false,x=0,y=-95,width=300,height=28,scale=1,
@@ -32,7 +32,9 @@ function HC.LoadUnitBarSettings(saved)
 end
 local function hide(s,reason)
     s.cast=nil;s.reason=reason or s.reason
-    HC.HideEffects(s.effects);s.frame:Hide()
+    HC.HideEffects(s.effects);if s.timer then s.timer:Hide() end;s.frame:Hide()
+    if s.unit=="focus" and HC.UpdateBlizzardFocus then HC.UpdateBlizzardFocus() end
+    if s.unit=="target" and HC.UpdateBlizzardTarget then HC.UpdateBlizzardTarget() end
 end
 local function theme(s)
     local cfg=s.config
@@ -51,11 +53,19 @@ local function theme(s)
 end
 local function paint(s,now)
     local c=s.cast;if not c then return end
-    local value,duration,remaining=HC.Progress(c,now)
-    HC.DrawEffects(value/duration,now,s.effects,theme(s))
-    if not HC.IsMaterialAvailable(s.effects) then hide(s,"material-unavailable");return end
+    if c.native then
+        HC.HideEffects(s.effects)
+        local color=theme(s).cast
+        s.timer:SetStatusBarColor(color[1],color[2],color[3],1)
+        s.timer:Show();s.time:SetText('')
+    else
+        s.timer:Hide()
+        local value,duration,remaining=HC.Progress(c,now)
+        HC.DrawEffects(value/duration,now,s.effects,theme(s))
+        if not HC.IsMaterialAvailable(s.effects) then hide(s,"material-unavailable");return end
+        s.time:SetText(string.format("%.1f s",remaining))
+    end
     s.name:SetText(L(labels[s.unit]).." · "..c.name)
-    s.time:SetText(string.format("%.1f s",remaining))
     if c.interruptible==true then
         s.interrupt:SetText(L("Unterbrechbar"));s.interrupt:SetTextColor(.65,.95,.75,1)
     elseif c.interruptible==false then
@@ -80,6 +90,8 @@ local function paint(s,now)
         if s.iconLoaded then s.icon:Show() else s.icon:Hide() end
     else s.icon:Hide() end
     s.frame:Show()
+    if s.unit=="focus" and HC.UpdateBlizzardFocus then HC.UpdateBlizzardFocus() end
+    if s.unit=="target" and HC.UpdateBlizzardTarget then HC.UpdateBlizzardTarget() end
 end
 local function unitAvailable(unit)
     if type(UnitExists)~="function" then return false,"unsupported" end
@@ -103,11 +115,14 @@ local function refresh(s)
     if not s.config.enabled then hide(s,"disabled");return end
     if s.config.visibility=="combat" and not InCombatLockdown() then hide(s,"visibility");return end
     local available,reason=unitAvailable(s.unit)
-    if not available then reset(s);s.reason=reason;return end
+    if not available and not (reason=="restricted" and HC.CanUseUnitTimer and HC.CanUseUnitTimer(s)) then reset(s);s.reason=reason;return end
     local guid=identity(s.unit)
     if guid and s.guid and guid~=s.guid then reset(s) end
     s.guid=guid
     local cast,why=HC.ReadCurrent(s.unit)
+    s.readReason=why;s.timerReason=nil
+    if why=='restricted' then s.restricted=(s.restricted or 0)+1 end
+    if why=='error' then s.apiErrors=(s.apiErrors or 0)+1 end
     local now=GetTime()
     if s.ended then
         for i=#s.ended,1,-1 do
@@ -116,6 +131,10 @@ local function refresh(s)
             elseif cast and cast.id~=nil and cast.id==ended.id then cast=nil;why="ended" end
         end
         if #s.ended==0 then s.ended=nil end
+    end
+    if not cast and why~='ended' and why~='unsupported' and HC.ReadUnitTimer then
+        local native,timerReason=HC.ReadUnitTimer(s);s.timerReason=timerReason
+        if native then cast=native;why='active' end
     end
     s.cast=cast;s.reason=why;s.lastRead=now
     if cast then paint(s,now) else hide(s,why) end
@@ -132,16 +151,24 @@ local function tick()
                 channel=channel,icon=135846,interruptible=unit=="target"}
             paint(s,now);active=true
         elseif s.cast then
-            -- Re-query live data for duration changes and restrictions. No idle polling.
-            if now-(s.lastRead or 0)>=.10 or now>=s.cast.finish then refresh(s) end
-            if s.cast then paint(s,now);active=true end
+            -- Re-query active data for duration changes and restrictions.
+            if now-(s.lastRead or 0)>=.10 or (s.cast.finish and now>=s.cast.finish) then refresh(s) end
+            if s.cast then if not s.cast.native then paint(s,now) end;active=true end
+        elseif s.config.enabled and HC.CanUseUnitTimer and HC.CanUseUnitTimer(s) then
+            -- Bounded 5 Hz recovery also covers missed or inaccessible unit events.
+            if now-(s.lastRead or 0)>=.2 then refresh(s);s.lastRead=now end
+            active=true
         end
+    end
+    for _,unit in ipairs(units) do
+        local s=HC.unitBars[unit]
+        if s.config.enabled and HC.CanUseUnitTimer and HC.CanUseUnitTimer(s) then active=true end
     end
     if not active then driver:SetScript("OnUpdate",nil);driver:Hide() end
 end
 local function wake()
     local active=HC.unitBarsPreview
-    for _,unit in ipairs(units) do if HC.unitBars[unit].cast then active=true end end
+    for _,unit in ipairs(units) do if HC.unitBars[unit].cast or (HC.unitBars[unit].config.enabled and HC.CanUseUnitTimer and HC.CanUseUnitTimer(HC.unitBars[unit])) then active=true end end
     if active then driver:SetScript("OnUpdate",tick);driver:Show()
     else driver:SetScript("OnUpdate",nil);driver:Hide() end
 end
@@ -151,6 +178,9 @@ local function layout(s)
     s.frame:SetScale(cfg.scale);s.frame:SetSize(cfg.width,cfg.height)
     s.name:SetWidth(math.max(80,cfg.width-65));s.icon:SetSize(cfg.height,cfg.height)
     HC.LayoutEffects(cfg.width,cfg.height,s.effects)
+    s.timer:SetSize(cfg.width,cfg.height)
+    -- Match the selected player/profile font exactly; no physical-size override.
+    for _,text in ipairs({s.name,s.time,s.interrupt}) do HC.ApplyCastFont(text) end
 end
 local function create(unit)
     local frame=CreateFrame("Frame",nil,UIParent)
@@ -158,6 +188,11 @@ local function create(unit)
     frame:RegisterForDrag("LeftButton");frame:EnableMouse(false)
     local s={unit=unit,frame=frame,generation=0,reason="disabled"}
     s.effects=HC.CreateEffects(frame,true)
+    s.timer=CreateFrame('StatusBar',nil,frame)
+    s.timer:SetPoint('CENTER',frame,'CENTER',0,0)
+    s.timerReady=s.timer:SetStatusBarTexture('Interface\\TargetingFrame\\UI-StatusBar')~=false
+    local bg=s.timer:CreateTexture(nil,'BACKGROUND');bg:SetAllPoints(s.timer);bg:SetColorTexture(.04,.04,.06,.8)
+    s.timer:Hide()
     s.name=frame:CreateFontString(nil,"OVERLAY","GameFontHighlightSmall")
     s.name:SetPoint("BOTTOMLEFT",frame,"TOPLEFT",0,2);s.name:SetJustifyH("LEFT");s.name:SetWordWrap(false)
     s.time=frame:CreateFontString(nil,"OVERLAY","GameFontHighlightSmall")
@@ -179,6 +214,7 @@ local function create(unit)
     return s
 end
 function HC.ConfigureUnitBar(unit,patch)
+    if HC.unitBarsInDevelopment then return false,'in-development' end
     if unit~="target" and unit~="focus" then return false,"unsupported" end
     if type(patch)~="table" or not HC.db then return false,"invalid" end
     local base=pending[unit] or HC.db.unitBars[unit];local merged={}
@@ -193,6 +229,7 @@ function HC.ConfigureUnitBar(unit,patch)
     return true,"applied"
 end
 function HC.RefreshUnitBars()
+    if HC.unitBarsInDevelopment then return false,'in-development' end
     if not HC.unitBars then return end
     for _,unit in ipairs(units) do
         local s=HC.unitBars[unit]
@@ -202,6 +239,7 @@ function HC.RefreshUnitBars()
     wake()
 end
 function HC.PreviewUnitBars(enabled,unit)
+    if HC.unitBarsInDevelopment then return false,'in-development' end
     if not HC.unitBars or InCombatLockdown() then return false end
     HC.unitBarsPreview=enabled==true;HC.unitBarsPreviewStart=GetTime()
     HC.unitBarsPreviewUnit=HC.unitBarsPreview and (unit=='target' or unit=='focus') and unit or nil
@@ -223,6 +261,7 @@ local function reconcile(s)
     end)
 end
 function HC.InitializeUnitBars()
+    if HC.unitBarsInDevelopment then return false,'in-development' end
     if HC.unitBars or not HC.db then return end
     HC.db.unitBars=HC.LoadUnitBarSettings(HC.db.unitBars)
     HC.unitBars={};driver=CreateFrame("Frame");driver:Hide();HC.unitBarsDriver=driver

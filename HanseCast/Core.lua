@@ -1,8 +1,10 @@
 local _, HC = ...
-HC.version = "1.0.0"
+HC.version = "1.0.4"
+-- Release gate, deliberately not a saved setting or profile option.
+HC.unitBarsInDevelopment = true
 HC.defaults = { schema = 3, x = 0, y = -180, width = 300, height = 32, scale = 1,
     theme = "modern", family = "element", element = "frost", identity = "class", faction = "none",
-    gcd = true, hideBlizzard = false, finishCue = true, autoSpellVisual = false }
+    gcd = true, hideBlizzard = false, hideBlizzardFocus = true, hideBlizzardTarget = true, finishCue = true, autoSpellVisual = false }
 
 HC.elementKeys={frost=true,fire=true,arcane=true,faction_alliance=true,faction_horde=true,
     warlock_affliction=true,warlock_demonology=true,warlock_destruction=true,
@@ -28,7 +30,7 @@ function HC.LoadSettings(saved)
         if HC.ValidNumber(saved[key], range[1], range[2]) then db[key] = saved[key] end
     end
     db.height = math.max(24,db.height)
-    for _, key in ipairs({"gcd", "hideBlizzard", "finishCue", "autoSpellVisual"}) do
+    for _, key in ipairs({"gcd", "hideBlizzard", "hideBlizzardFocus", "hideBlizzardTarget", "finishCue", "autoSpellVisual"}) do
         if type(saved[key]) == "boolean" then db[key] = saved[key] end
     end
     if saved.theme == "modern" or saved.theme == "rune" or saved.theme == "minimal" then db.theme = saved.theme end
@@ -53,4 +55,11 @@ end
 
 function HC.Matches(cast, id)
     return cast and id ~= nil and cast.id ~= nil and cast.id == id
+end
+
+-- All cast labels use the active profile; parent bar scale remains independent.
+function HC.ApplyCastFont(label)
+    local db=HC.db or {}
+    local font=db.font=='modern' and 'Fonts\\ARIALN.TTF' or 'Fonts\\FRIZQT__.TTF'
+    label:SetFont(font,db.fontSize or 12,'')
 end

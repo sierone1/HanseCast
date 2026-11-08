@@ -5,7 +5,7 @@
 ## Notes-deDE: Animierte Zauberleisten mit eigener Optik, separater GCD-Anzeige und Profilen.
 ## X-License: All Rights Reserved
 ## Author: Hanse
-## Version: 1.0.0
+## Version: 1.0.4
 ## SavedVariables: HanseCastDB
 
 Core.lua
@@ -17,6 +17,7 @@ CastFeedback.lua
 GCD.lua
 Themes.lua
 Effects.lua
+NativeUnits.lua
 UnitBars.lua
 Comfort.lua
 View.lua

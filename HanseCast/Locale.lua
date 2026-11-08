@@ -1,5 +1,10 @@
 local _,HC=...
 local en={
+ ['Blizzard-Fokus: ']='Blizzard focus: ',
+ ['Fokus durch Hanse ersetzt']='Focus replaced by Hanse',
+ ['Fokus: Standard als Rückfall verfügbar']='Focus: default available as fallback',
+ ['Fokus: Standard bleibt, Frame nicht sicher veränderbar']='Focus: default remains, frame cannot be changed safely',
+ ['Fokus: Wiederherstellung ausstehend']='Focus: restoration pending',
  ['Fraktionen']='Factions',['Fest · Fraktionsoptik']='Fixed · Faction style',
  ['Vorschau · ']='Preview · ',['Zauber: ']='Cast: ',['unbekannt']='unknown',
  [' | geschützt: ']=' | restricted: ',[' | API-Fehler: ']=' | API errors: ',[' | fehlende Events: ']=' | missing events: ',
@@ -71,6 +76,50 @@ local en={
  ['Übernehmen']='Inherit',['Symbol']='Icon',['Vorschau Ziel / Fokus']='Preview target / focus',
  ['Position X']='Position X',['Position Y']='Position Y',
 }
+en['Blizzard-Ziel: ']='Blizzard target: '
+en['Ziel durch Hanse ersetzt']='Target replaced by Hanse'
+en['Ziel: Standard als Rückfall verfügbar']='Target: default available as fallback'
+en['Ziel: Standard bleibt, Frame nicht sicher veränderbar']='Target: default remains, frame not safely writable'
+en['Ziel: Wiederherstellung ausstehend']='Target: restoration pending'
+en['sichtbar']='visible'
+en['ja']='yes'
+en['nein']='no'
+en['geschützte Abfragen']='restricted queries'
+en['API-Fehler']='API errors'
+en['aktiviert']='enabled'
+en['deaktiviert']='disabled'
+en['Abfrage']='Query'
+en['Timer']='Timer'
+en['Darstellung']='Display'
+en['schlichte Timerleiste']='plain timer bar'
+en['gewählte Optik']='selected artwork'
+en['aktiv']='active'
+en['kein Zauber']='no cast'
+en['außerhalb der gewählten Sichtbarkeit']='outside selected visibility'
+en['keine Einheit']='no unit'
+en['Daten eingeschränkt']='data restricted'
+en['Zeitdaten ungültig']='invalid timing'
+en['Abfragefehler']='query error'
+en['Schnittstelle fehlt']='API missing'
+en['nicht unterstützt']='unsupported'
+en['beendet']='ended'
+en['Einheit gewechselt']='unit changed'
+en['Grafik nicht verfügbar']='artwork unavailable'
+en['nativer Timer aktiv']='native timer active'
+en['kein Dauerobjekt']='no duration object'
+en['Timer-Schnittstelle fehlt']='timer API missing'
+en['Dauerobjekt-Abfrage fehlgeschlagen']='duration query failed'
+en['Timer-Übergabe abgelehnt']='timer submission denied'
+en['Kanalzauber']='Channel'
+en['Zauber']='Cast'
+en['letzte Abfrage']='last query'
+en['letzter Timerstatus']='last timer status'
+en['Grafik']='Artwork'
+en['native Timertextur']='native timer texture'
+en['verfügbar']='available'
+en['fehlt']='missing'
+en['In Arbeit – deaktiviert']='In development – disabled'
+en['Ziel & Fokus: in Arbeit – deaktiviert']='Target & focus: in development – disabled'
 HC.localeEnglish=en
 function HC.GetLanguage()
  local choice=HC.db and HC.db.language or 'auto'

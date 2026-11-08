@@ -1,3 +1,64 @@
+# Hanse Cast 1.0.4
+
+- Ziel & Fokus: „in Arbeit“, Menü gesperrt, Laufzeit und Blizzard-Ersatz deaktiviert.
+- Alte Profilwerte bleiben erhalten. Spieler/GCD unverändert verfügbar.
+- Separate kompakte Ziel-/Fokusleisten geplant, noch nicht umgesetzt.
+- Target/focus disabled in menu and runtime; prior profile values retained.
+- `/reload` erforderlich. Kein Veröffentlichungsupload; native Prüfung offen.
+
+---
+
+# Hanse Cast 1.0.3
+
+- Ziel und Fokus übernehmen die eingestellte Schriftart und Schriftgröße des aktiven Profils für Namen, Zeit und Unterbrechbarkeit. Die automatische Mindestgröße aus 1.0.2 entfällt. Unterschiedliche Leistenskalierungen bleiben erhalten.
+- Gemeinsame Schriftanwendung mit der Spielerleiste; Menü erklärt den gemeinsamen Geltungsbereich.
+- Target and focus now use the selected profile font and size for all cast labels. Removed the automatic physical minimum from 1.0.2. Individual bar scales remain intact.
+- `/reload` genügt / is sufficient. Native Sichtprüfung der Korrektur offen. Kein Veröffentlichungsupload.
+
+---
+
+# Hanse Cast 1.0.2
+
+## Deutsch
+
+- Ziel/Fokus: native Dauerobjekt-Anzeige als Rückfall bei fehlenden lesbaren Zeitdaten. Schlichte farbige Timerleiste an gespeicherter Position; keine errechnete Restzeit aus geschützten Daten.
+- Unabhängiger Blizzard-Zielersatz nur bei sichtbarer eigener Leiste, mit sicherem Rückfall. Namensplaketten/Leben/Mana bleiben erhalten.
+- Menü zeigt nur die Ersatzoption der ausgewählten Einheit. Ziel-/Fokusschrift berücksichtigt kleine physische UI-Skalierung.
+- Status nennt getrennte Einheitszustände, Abfrage-/Timergründe und Fehlerzähler. Begrenzte Wiederholungsabfragen erkennen verpasste Ziel-/Fokusstarts.
+- Begleitaddon Duration Lab 0.1.1: eindeutige AN-/Ausschalten-Beschriftung.
+- 28 lokale Testsuiten und separate Lab-Prüfung bestanden; installiert und per SHA-256 bestätigt.
+- Vollständiger WoW-Neustart erforderlich (neues Lua-Modul). Einstellungen bleiben erhalten. Exporte mit hideBlizzardTarget benötigen mindestens 1.0.2. Native Spielprüfung offen; keine Veröffentlichung.
+
+## English
+
+- Added native duration fallback for target/focus with unreadable classic timing: plain tinted bar, saved placement, no guessed countdown.
+- Added independent target cast-bar replacement, contextual options, readable unit text and per-unit diagnostic counters.
+- Bounded recovery queries detect missed unit starts. Nameplates/health/power remain unaffected.
+- Companion Duration Lab 0.1.1 clarifies ON and the disable command.
+- Fully restart WoW for the new module. Existing settings remain intact; new profile exports require 1.0.2. Native validation pending; not published.
+
+---
+
+# Hanse Cast 1.0.1
+
+## Deutsch
+
+- Überlagerung der Hanse-Fokuscastbar durch die Blizzard-Castbar behoben: eigener Fokus-Ersatz mit sicherem Rückfall, standardmäßig eingeschaltet.
+- Neue Option unter Ziel & Fokus → Fokus; Lebens-/Manabalken bleiben sichtbar.
+- Diagnose ergänzt den Fokus-Ersatzstatus. Profile übernehmen die neue Option; bestehende Einstellungen bleiben erhalten.
+- 27 lokale Testsuiten bestanden. Native Spielprüfung noch offen. Keine Veröffentlichung erfolgt.
+
+Bestehende Profile und ältere Exporte können importiert werden. Neue Exporte enthalten `hideBlizzardFocus` und sind nicht für den Import in ältere Addon-Versionen vorgesehen.
+
+## English
+
+- Added independent focus cast-bar replacement to prevent overlap with the visible Hanse bar, with native fallback; enabled by default.
+- Added a focus setting and diagnostic status. Health/power bars are unaffected.
+- Existing profiles/imports migrate; exports containing the new field require 1.0.1 or newer.
+- 27 local test suites passed. Native gameplay validation remains pending; not published.
+
+---
+
 # Hanse Cast 1.0.0
 
 ## English

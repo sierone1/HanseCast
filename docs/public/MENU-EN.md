@@ -1,11 +1,11 @@
-# Hanse Cast 1.0.0 — Menu guide
+# Hanse Cast 1.0.4 — Menu guide
 
 Open Escape → Options/Settings → AddOns → Hanse Cast, or type `/hansecast`. The standalone fallback uses the same settings when the native Settings API is unavailable.
 
 ## Four tabs
 
 - **Player:** category, theme group, manual appearance, automatic spell appearance, width, height, scale, GCD, completion pulse and optional Blizzard player bar replacement. **More settings** reveals accents, emblem, coordinates, text, opacity, icons, latency and manual channel guides.
-- **Target & focus:** choose a bar first; its appearance, position and visibility are independent. Blizzard unit frames are preserved.
+- **Target & focus (in development):** disabled and greyed out. Separate compact bars are planned.
 - **Profiles:** select, activate, create, copy, export, import, delete and reset.
 - **Help:** language, quick start, display limitations, event demo and diagnostic chat output.
 
@@ -15,7 +15,7 @@ Hover over a setting or control for an explanation. Changes apply immediately to
 
 The embedded preview uses the addon's original textures and shared effect renderer in an independent instance. It shows the manually chosen style with a simulated three-second cast and scales down to fit. It is an artwork preview, not an exact preview of every text, icon or extra indicator. It does not move the live player bar or replace its active cast. Animation stops when the menu is hidden, another tab is selected or combat begins.
 
-**Position** hides the settings window and shows the existing in-game preview. Drag with the left mouse button. **Done — return to settings** locks the bar and reopens the menu. Escape or combat stops positioning. Target/focus preview only shows the selected bar and does not permanently enable disabled bars.
+**Position** hides the settings window and shows the existing in-game preview. Drag with the left mouse button. **Done — return to settings** locks the bar and reopens the menu. Escape or combat stops positioning. Target/focus previews are disabled; previous profile values are retained.
 
 ## Appearance
 
@@ -32,3 +32,6 @@ Existing 0.9.1/0.10.0 profiles, SavedVariables schema and HANSECAST:1 exports re
 ## Limits
 
 Unavailable or restricted spell data may prevent custom display; empower spells are unsupported. Channel guides are manual divisions, not detected damage/healing ticks. Latency is guidance, not an exact input queue window. The custom settings canvas has no full-text search. Automated mock-API tests supplement, but do not replace, real-client verification.
+
+
+After updating, type `/reload`. Blizzard target/focus bars remain available. `/hansecast units` only reports the development status.

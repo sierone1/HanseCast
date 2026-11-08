@@ -113,3 +113,171 @@ function HC.RestoreBlizzard()
     local restored = Restore()
     HC.blizzardStatus = restored and "unverändert" or "Wiederherstellung ausstehend"
 end
+
+-- Focus owns a separate adapter. Never touch FocusFrame itself, target frames,
+-- native event registrations, cast records or showCastbar.
+local focusAttached, focusSuppressing, focusWriting
+local focusAlpha=1
+local focusCleanup=false
+local focusCastID
+local function FocusWrite(alpha)
+    if not Writable(focusAttached) then return false end
+    focusWriting=true
+    local ok=pcall(focusAttached.SetAlpha,focusAttached,alpha)
+    focusWriting=false
+    return ok
+end
+local function FocusRestore(s)
+    if not focusSuppressing then return true end
+    if not Writable(focusAttached) then return false end
+    -- Alpha zero can skip Blizzard's fade/OnFinished. Clean up only after a
+    -- fresh readable query proves idle, or the same confirmed-ended cast.
+    if focusCleanup and HC.ReadCurrent then
+        local current,reason=HC.ReadCurrent('focus')
+        local ended=s and s.reason=='ended' and current and current.id~=nil
+            and focusCastID~=nil and current.id==focusCastID
+        if ((reason~='active' and HC.NativeUnitIdle('focus')) or (reason=='idle' and type(UnitCastingDuration)~='function' and type(UnitChannelDuration)~='function')) or ended then
+            if type(focusAttached.Hide)~='function' or not pcall(focusAttached.Hide,focusAttached) then return false end
+        end
+    end
+    focusSuppressing=false
+    if not FocusWrite(focusAlpha) then focusSuppressing=true;return false end
+    focusCleanup=false;focusCastID=nil
+    return true
+end
+local function FocusAttach(frame)
+    if focusAttached==frame then return true end
+    if focusAttached or not Writable(frame) or type(hooksecurefunc)~='function'
+        or type(frame.SetAlpha)~='function' or type(frame.GetAlpha)~='function' then return false end
+    local ok=pcall(hooksecurefunc,frame,'SetAlpha',function(_,alpha)
+        if focusWriting or not focusSuppressing then return end
+        if Accessible(alpha) and HC.ValidNumber(alpha,0,1) then focusAlpha=alpha end
+        if not FocusWrite(0) then HC.blizzardFocusStatus='Fokus: Wiederherstellung ausstehend' end
+    end)
+    if not ok then return false end
+    focusAttached=frame
+    return true
+end
+function HC.UpdateBlizzardFocus()
+    if HC.unitBarsInDevelopment then HC.blizzardFocusStatus='In Arbeit – deaktiviert';return end
+    local s=HC.unitBars and HC.unitBars.focus
+    local want=HC.db and HC.db.hideBlizzardFocus==true and s and s.config.enabled
+        and not HC.unitBarsPreview and s.cast~=nil and s.reason=='active' and s.frame:IsShown()
+        and (s.cast.native or not HC.IsMaterialAvailable or HC.IsMaterialAvailable(s.effects))
+    if not want then
+        HC.blizzardFocusStatus=FocusRestore(s) and 'Fokus: Standard als Rückfall verfügbar'
+            or 'Fokus: Wiederherstellung ausstehend'
+        return
+    end
+    local frame=FocusFrameSpellBar
+    if not frame and FocusFrame then frame=FocusFrame.spellbar end
+    if not frame or not FocusAttach(frame) or not Writable(frame) then
+        HC.blizzardFocusStatus=FocusRestore(s) and 'Fokus: Standard bleibt, Frame nicht sicher veränderbar'
+            or 'Fokus: Wiederherstellung ausstehend'
+        return
+    end
+    if not focusSuppressing then
+        local ok,alpha=pcall(frame.GetAlpha,frame)
+        focusAlpha=1
+        if ok and Accessible(alpha) and HC.ValidNumber(alpha,0,1) then focusAlpha=alpha end
+        focusSuppressing=true;focusCleanup=true
+    end
+    focusCastID=s.cast.id
+    -- Only first acquisition writes; native SetAlpha changes are post-hooked.
+    -- Repeated calls during drawing remain cheap and keep fallback checks live.
+    if not focusWriting then
+        local ok,alpha=pcall(frame.GetAlpha,frame)
+        if ok and Accessible(alpha) and alpha==0 then
+            HC.blizzardFocusStatus='Fokus durch Hanse ersetzt';return
+        end
+    end
+    if FocusWrite(0) then HC.blizzardFocusStatus='Fokus durch Hanse ersetzt'
+    else
+        HC.blizzardFocusStatus=FocusRestore(s) and 'Fokus: Standard als Rückfall verfügbar'
+            or 'Fokus: Wiederherstellung ausstehend'
+    end
+end
+
+-- Target owns a separate adapter. Never touch TargetFrame itself or nameplates,
+-- native event registrations, cast records or showCastbar.
+local targetAttached, targetSuppressing, targetWriting
+local targetAlpha=1
+local targetCleanup=false
+local targetCastID
+local function TargetWrite(alpha)
+    if not Writable(targetAttached) then return false end
+    targetWriting=true
+    local ok=pcall(targetAttached.SetAlpha,targetAttached,alpha)
+    targetWriting=false
+    return ok
+end
+local function TargetRestore(s)
+    if not targetSuppressing then return true end
+    if not Writable(targetAttached) then return false end
+    -- Alpha zero can skip Blizzard's fade/OnFinished. Clean up only after a
+    -- fresh readable query proves idle, or the same confirmed-ended cast.
+    if targetCleanup and HC.ReadCurrent then
+        local current,reason=HC.ReadCurrent('target')
+        local ended=s and s.reason=='ended' and current and current.id~=nil
+            and targetCastID~=nil and current.id==targetCastID
+        if ((reason~='active' and HC.NativeUnitIdle('target')) or (reason=='idle' and type(UnitCastingDuration)~='function' and type(UnitChannelDuration)~='function')) or ended then
+            if type(targetAttached.Hide)~='function' or not pcall(targetAttached.Hide,targetAttached) then return false end
+        end
+    end
+    targetSuppressing=false
+    if not TargetWrite(targetAlpha) then targetSuppressing=true;return false end
+    targetCleanup=false;targetCastID=nil
+    return true
+end
+local function TargetAttach(frame)
+    if targetAttached==frame then return true end
+    if targetAttached or not Writable(frame) or type(hooksecurefunc)~='function'
+        or type(frame.SetAlpha)~='function' or type(frame.GetAlpha)~='function' then return false end
+    local ok=pcall(hooksecurefunc,frame,'SetAlpha',function(_,alpha)
+        if targetWriting or not targetSuppressing then return end
+        if Accessible(alpha) and HC.ValidNumber(alpha,0,1) then targetAlpha=alpha end
+        if not TargetWrite(0) then HC.blizzardTargetStatus='Ziel: Wiederherstellung ausstehend' end
+    end)
+    if not ok then return false end
+    targetAttached=frame
+    return true
+end
+function HC.UpdateBlizzardTarget()
+    if HC.unitBarsInDevelopment then HC.blizzardTargetStatus='In Arbeit – deaktiviert';return end
+    local s=HC.unitBars and HC.unitBars.target
+    local want=HC.db and HC.db.hideBlizzardTarget==true and s and s.config.enabled
+        and not HC.unitBarsPreview and s.cast~=nil and s.reason=='active' and s.frame:IsShown()
+        and (s.cast.native or not HC.IsMaterialAvailable or HC.IsMaterialAvailable(s.effects))
+    if not want then
+        HC.blizzardTargetStatus=TargetRestore(s) and 'Ziel: Standard als Rückfall verfügbar'
+            or 'Ziel: Wiederherstellung ausstehend'
+        return
+    end
+    local frame=TargetFrameSpellBar
+    if not frame and TargetFrame then frame=TargetFrame.spellbar end
+    if not frame or not TargetAttach(frame) or not Writable(frame) then
+        HC.blizzardTargetStatus=TargetRestore(s) and 'Ziel: Standard bleibt, Frame nicht sicher veränderbar'
+            or 'Ziel: Wiederherstellung ausstehend'
+        return
+    end
+    if not targetSuppressing then
+        local ok,alpha=pcall(frame.GetAlpha,frame)
+        targetAlpha=1
+        if ok and Accessible(alpha) and HC.ValidNumber(alpha,0,1) then targetAlpha=alpha end
+        targetSuppressing=true;targetCleanup=true
+    end
+    targetCastID=s.cast.id
+    -- Only first acquisition writes; native SetAlpha changes are post-hooked.
+    -- Repeated calls during drawing remain cheap and keep fallback checks live.
+    if not targetWriting then
+        local ok,alpha=pcall(frame.GetAlpha,frame)
+        if ok and Accessible(alpha) and alpha==0 then
+            HC.blizzardTargetStatus='Ziel durch Hanse ersetzt';return
+        end
+    end
+    if TargetWrite(0) then HC.blizzardTargetStatus='Ziel durch Hanse ersetzt'
+    else
+        HC.blizzardTargetStatus=TargetRestore(s) and 'Ziel: Standard als Rückfall verfügbar'
+            or 'Ziel: Wiederherstellung ausstehend'
+    end
+end

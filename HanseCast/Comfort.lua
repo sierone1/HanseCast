@@ -1,5 +1,4 @@
 local _,HC=...
-local fonts={default='Fonts\\FRIZQT__.TTF',modern='Fonts\\ARIALN.TTF'}
 -- These regions are owned exclusively by this module. Parent-frame hiding does
 -- not change a child's own shown flag, so retain the cache across frame hides.
 local function Visible(region,shown)
@@ -21,7 +20,7 @@ end
 function HC.ApplyComfortLayout()
  local f,db=HC.frame,HC.db;if not f or not db then return end
  for _,label in ipairs({f.label,f.time}) do
-  if label and label.SetFont then label:SetFont(fonts[db.font] or fonts.default,db.fontSize or 12,'') end
+  if label and label.SetFont then HC.ApplyCastFont(label) end
  end
  if f.spellIcon then
   local size=math.max(16,math.min(28,db.height));f.spellIcon:SetSize(size,size);f.spellIcon:ClearAllPoints()

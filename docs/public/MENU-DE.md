@@ -1,4 +1,4 @@
-# Hanse Cast 1.0.0 – Menüanleitung
+# Hanse Cast 1.0.4 – Menüanleitung
 
 Öffne **Escape → Optionen/Einstellungen → AddOns → Hanse Cast** oder gib `/hansecast` ein. Die Einstellungen lassen sich direkt im WoW-Fenster bearbeiten. Wenn die benötigte Settings-Schnittstelle fehlt, öffnet sich ein eigenes Fenster mit denselben Bereichen.
 
@@ -7,7 +7,7 @@ Oben steht immer das aktive Profil. Normale Änderungen gelten sofort für diese
 ## Die vier Reiter
 
 - **Spieler:** Kategorie, Themengruppe, manuelle Optik, Zauberautomatik, Breite, Höhe, Skalierung, GCD, Abschlusslicht und Blizzard-Ersatz. **Weitere Einstellungen** öffnet Akzente, Wappen, genaue Position, Schrift, Zeitanzeige, Deckkraft, Symbol, Latenz und Kanal-Hilfslinien.
-- **Ziel & Fokus:** zuerst die betroffene Leiste auswählen. Aktivierung, Sichtbarkeit, Symbol, Optik, Größe und Position gelten nur für diese Leiste.
+- **Ziel & Fokus (in Arbeit):** ausgegraut und deaktiviert. Separate kompakte Leisten sind geplant.
 - **Profile:** auswählen, aktivieren, erstellen, kopieren, exportieren, importieren, löschen oder zurücksetzen.
 - **Hilfe:** Sprache, Kurzanleitung, Grenzen, Ereignis-Demo und Statusausgabe.
 
@@ -19,7 +19,7 @@ Die eingebettete Original-Vorschau verwendet dieselben Originaltexturen und dies
 
 „Positionieren“ blendet das große Menü aus und zeigt eine künstliche Vorschau mit einer kleinen Werkzeugleiste. Ziehe die Leiste mit der linken Maustaste. „Fertig – zurück zu Einstellungen“ beendet die Vorschau, sperrt die Position und öffnet die Einstellungen wieder. Escape beendet die Vorschau ebenfalls. Bei Kampfbeginn werden Vorschauen und Verschieben beendet.
 
-Ziel/Fokus-Vorschauen zeigen nur die ausgewählte Leiste. Eine Vorschau aktiviert eine abgeschaltete Leiste nicht dauerhaft. Prüfe die Darstellung anschließend mit echten Zaubern.
+Ziel-/Fokusvorschauen sind deaktiviert. Alte Profilwerte bleiben für eine spätere Entwicklung erhalten.
 
 ## Gestaltung verstehen
 
@@ -38,3 +38,6 @@ Löschen und Zurücksetzen nennen das ausgewählte Profil in einem Bestätigungs
 ## Grenzen
 
 Geschützte oder fehlende Zauberdaten können die eigene Anzeige verhindern. Keine Empower-Unterstützung. Die eingebetteten Seiten bieten derzeit keine eigene Volltextsuche. Menü und Kernfunktionen werden automatisiert mit simulierten Spiel-APIs geprüft; echte Clientdarstellung und Spielverhalten benötigen zusätzlich die Ingame-Prüfung.
+
+
+Nach dem Update `/reload` eingeben. Blizzard-Ziel-/Fokusleisten bleiben unverändert verfügbar. `/hansecast units` meldet nur „in Arbeit“.

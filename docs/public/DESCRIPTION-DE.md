@@ -1,6 +1,6 @@
 # Deutsch
 
-**Deine Zauber, dein Stil.** Hanse Cast verbindet animierte Zauberleisten mit klasseninspirierten Grafiken für **WoW Forever 1.60.1**. Verfolge deine Zauber und Kanalisierungen, behalte die globale Abklingzeit im Blick und platziere die Anzeigen dort, wo du sie brauchst. Optionale Ziel- und Fokusleisten ergänzen deine Oberfläche.
+**Deine Zauber, dein Stil.** Hanse Cast verbindet animierte Zauberleisten mit klasseninspirierten Grafiken für **WoW Forever 1.60.1**. Verfolge deine Zauber und Kanalisierungen, behalte die globale Abklingzeit im Blick und platziere die Anzeigen dort, wo du sie brauchst. Ziel und Fokus sind derzeit als „in Arbeit“ deaktiviert.
 
 ## Gestalte deine Leisten
 
@@ -12,7 +12,6 @@ Die Grafik behält ihre Form und wird mit dem Zauberfortschritt freigelegt. Posi
 
 - Spielerzauber und Kanalisierungen mit Namen, Fortschritt und wählbarer Zeitdarstellung.
 - Separate GCD-Anzeige, auch bei unterstützten Sofortzaubern.
-- Optionale Ziel- und Fokusleisten mit eigenen Positionen, Größen und Optiken.
 - Rückmeldungen zu Abbruch, Unterbrechung und Fehlschlag, soweit die nötigen Informationen verfügbar sind.
 - Bis zu zwölf benannte Profile mit Kopierfunktion sowie validiertem Textimport und -export.
 - Optionale automatische Optik für unterstützte Zauber; unbekannte Zauber behalten die manuelle Auswahl.
@@ -25,7 +24,7 @@ Die Grafik behält ihre Form und wird mit dem Zauberfortschritt freigelegt. Posi
 2. **Optionen/Einstellungen → AddOns → Hanse Cast** öffnen oder `/hansecast` eingeben.
 3. Im Reiter **Spieler** die Optik und Größe wählen. **Weitere Einstellungen** öffnet Schrift, Symbole und Feineinstellungen. Erklärungen erscheinen beim Darüberfahren mit der Maus.
 4. **Positionieren** wählen, die Leiste verschieben und mit **Fertig – zurück zu Einstellungen** sperren und zurückkehren.
-5. Ziel- und Fokusleisten bei Bedarf im Reiter **Ziel & Fokus** aktivieren; beide sind zunächst ausgeschaltet.
+5. Ziel & Fokus ist als „in Arbeit“ gesperrt. Für diese Einheiten bleiben die normalen Blizzard-Leisten verfügbar.
 
 Das kompakte Menü hat vier Reiter: **Spieler**, **Ziel & Fokus**, **Profile** und **Hilfe**. Die animierte Menüvorschau verwendet die Originalgrafiken und dieselbe Zeichenfunktion wie die Castbar. Sie zeigt die manuell gewählte Optik, nicht sämtliche Text- und Symboloptionen in Originalgröße. Änderungen gelten sofort für das aktive Profil; im Kampf sind Änderungen gesperrt.
 
@@ -33,16 +32,16 @@ Bei manueller Installation den Ordner `HanseCast` nach `Interface/AddOns` entpac
 
 - `/hansecast` – Einstellungen öffnen.
 - `/hansecast test` – Spielervorschau ein- oder ausschalten.
-- `/hansecast units` – Ziel- und Fokusvorschau ein- oder ausschalten.
+- `/hansecast units` – Status „in Arbeit“ anzeigen; keine Vorschau.
 - `/hansecast status` – Version und Diagnoseinformationen anzeigen.
 
 ## Kompatibilität und Prüfstand
 
-**Version 1.0.0 ist für WoW Forever 1.60.1, Interface 16001 vorgesehen.** Andere WoW-Ausgaben werden von diesem Paket derzeit nicht unterstützt.
+**Version 1.0.4 ist für WoW Forever 1.60.1, Interface 16001 vorgesehen.** Andere WoW-Ausgaben werden von diesem Paket derzeit nicht unterstützt.
 
-Lokale Tests mit simulierten Spielschnittstellen prüfen Zauberereignisse, Einstellungen, Profile, Grafikdarstellung und das Wiederherstellen verfügbarer Ressourcen. Frühere Versionen wurden im echten Spiel genutzt, einschließlich Bildzeitvergleichen und Speicherprüfungen nach Reload und Neustart. Damit ist nicht jede Klasse, jeder Zauber, jede Anzeigeskalierung oder Addonkombination in Version 1.0.0 geprüft. Eine bestimmte Leistung auf jedem Rechner wird nicht zugesichert.
+Lokale Tests mit simulierten Spielschnittstellen prüfen Zauberereignisse, Einstellungen, Profile, Grafikdarstellung und das Wiederherstellen verfügbarer Ressourcen. Frühere Versionen wurden im echten Spiel genutzt, einschließlich Bildzeitvergleichen und Speicherprüfungen nach Reload und Neustart. Damit ist nicht jede Klasse, jeder Zauber, jede Anzeigeskalierung oder Addonkombination in Version 1.0.4 geprüft. Eine bestimmte Leistung auf jedem Rechner wird nicht zugesichert.
 
-Hanse Cast verwendet zugängliche Zauberinformationen. Fehlen erforderliche Daten oder sind sie geschützt, wird die betroffene eigene Anzeige ausgeblendet. Vollständig geschützte Dauerobjekte werden nicht direkt dargestellt. Empower-Zauber werden nicht unterstützt. Kanal-Hilfslinien sind manuelle Markierungen und keine automatisch erkannten Schadens- oder Heilticks. Die Latenzmarkierung zeigt die gemeldete Netzwerklatenz und kein exaktes Eingabe- oder Zauberwarteschlangenfenster.
+Die Spielerleiste benötigt zugängliche Zeitangaben. Ziel und Fokus sind vollständig deaktiviert; ihre bisherigen Einstellungen bleiben erhalten. Empower-Zauber werden nicht unterstützt. Kanal-Hilfslinien sind manuelle Markierungen. Die Latenzmarkierung ist eine Orientierung anhand gemeldeter Netzwerklatenz.
 
 Das Ersetzen der normalen Spieler-Zauberleiste ist optional und zunächst ausgeschaltet. Blizzards Ziel- und Fokusframes bleiben erhalten. Bei mehreren aktiven Zauberleisten-Addons können sich Anzeigen überlagern. Dann eine der Anzeigen deaktivieren oder die Einstellungen anpassen.
 
