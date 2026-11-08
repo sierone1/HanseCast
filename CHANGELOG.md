@@ -1,10 +1,24 @@
+# Hanse Cast 1.0.5
+
+- Gemeinsame Zauberzustände verhindern alte Rückmeldungen nach schnellen Zauberwechseln.
+- Ruhiger Modus stoppt dekorative Bewegung und zusätzliche Lichtimpulse; Fortschritt bleibt flüssig.
+- Weniger wiederholte Zeitformatierungen und Geometrieaufrufe; Dekoration getrennt getaktet.
+- Optionale, sicher zugeordnete Zauberstart-Schätzung und getrennte Anzeige des gelesenen Warteschlangenfensters. Keine Änderung der Spiel-CVar.
+- Browser für 145 Optiken, Filter und bis zu 20 Favoriten je Profil; validierter Import/Export.
+- Komfort-Vorlagen, horizontale Ausrichtung und Vorschau mit eingestellter Schrift, Zeitformat und Symbolposition.
+- Ziel/Fokus bleiben „in Arbeit“ und deaktiviert. Kanal-Hilfslinien bleiben manuell.
+- Stable promotion of the tested alpha.3 behaviour: reduced motion, guarded comfort indicators, favourites/filters, scoped presets and improved preview.
+- 36 automatisierte Testsuiten; alpha.3 zusätzlich mit 5.000 simulierten Abläufen geprüft. Nutzer bestätigt den gebündelten Spieltest mit „funktioniert alles“ am 08.11.2026. Keine vollständige Abdeckung aller Klassen, Zauber oder Addonkombinationen behauptet.
+
+---
+
 # Hanse Cast 1.0.4
 
 - Ziel & Fokus: „in Arbeit“, Menü gesperrt, Laufzeit und Blizzard-Ersatz deaktiviert.
 - Alte Profilwerte bleiben erhalten. Spieler/GCD unverändert verfügbar.
 - Separate kompakte Ziel-/Fokusleisten geplant, noch nicht umgesetzt.
 - Target/focus disabled in menu and runtime; prior profile values retained.
-- `/reload` erforderlich. Kein Veröffentlichungsupload; native Prüfung offen.
+- `/reload` erforderlich. Auf GitHub und CurseForge veröffentlicht; vollständige native Prüfung offen.
 
 ---
 

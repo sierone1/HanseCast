@@ -8,6 +8,8 @@ local specs={
  language={'auto','deDE','enUS',default='auto'},font={'default','modern',default='default'},
  timeFormat={'remaining','elapsed','both','hidden',default='remaining'},iconPosition={'hidden','left','right',default='hidden'},
  gcd={boolean=true,default=true},hideBlizzard={boolean=true,default=false},hideBlizzardFocus={boolean=true,default=true},hideBlizzardTarget={boolean=true,default=true},finishCue={boolean=true,default=true},
+ quietMode={boolean=true,default=false},castDelay={boolean=true,default=false},queueWindow={boolean=true,default=false},
+ favorites={default='',favorites=true},
  autoSpellVisual={boolean=true,default=false},latency={boolean=true,default=false},channelTicks={boolean=true,default=false},
  channelTickCount={2,10,5},
 }
@@ -21,8 +23,25 @@ for _,unit in ipairs({'target','focus'}) do
 end
 HC.profileSpecs=specs
 local function Default(s) if s.default~=nil then return s.default end;return s[3] end
+local familyKeys={element=true,splinter=true,silk=true,pulse=true,mist=true}
+local function StyleKey(value)
+ if type(value)~='string' then return nil end
+ local family,element=value:match('^([a-z]+):([a-z_]+)$')
+ if familyKeys[family] and HC.elementKeys[element] then return family,element end
+end
+local function Favorites(value)
+ if type(value)~='string' or #value>1600 then return nil end
+ local result,seen={},{}
+ if value=='' then return result end
+ for key in (value..','):gmatch('(.-),') do
+  if not StyleKey(key) or seen[key] or #result>=20 then return nil end
+  seen[key]=true;result[#result+1]=key
+ end
+ return result
+end
 local function Valid(key,value)
  local s=specs[key];if not s then return false end
+ if s.favorites then return Favorites(value)~=nil end
  if s.boolean then return type(value)=='boolean' end
  if type(s[1])=='number' then return HC.ValidNumber(value,s[1],s[2]) and (key~='channelTickCount' or value%1==0) end
  if type(value)~='string' then return false end
@@ -91,6 +110,7 @@ function HC.ProfileNames()
  local names={};for name in pairs(HC.db.profiles or {}) do names[#names+1]=name end;table.sort(names);return names
 end
 local function Apply(snapshot)
+ if HC.ResetComfortTiming then HC.ResetComfortTiming() end
  -- Runtime-only revision invalidates unfinished edits even when a reset/import
  -- replaces the current profile without changing its name. Never persisted.
  HC.profileRevision=(HC.profileRevision or 0)+1
@@ -177,4 +197,41 @@ function HC.ImportAsNewProfile(name,text)
  HC.db.profiles[name]=snapshot;HC.db.activeProfile=name
  HC.pendingProfileImport=nil;Apply(snapshot)
  return true
+end
+
+-- Bounded flat strings keep favourites compatible with the existing safe export.
+function HC.FavoriteStyles() return Favorites(HC.db.favorites) or {} end
+function HC.IsFavoriteStyle(key)
+ for _,value in ipairs(HC.FavoriteStyles()) do if value==key then return true end end
+ return false
+end
+function HC.ToggleFavoriteStyle(key)
+ if not Allowed() then return false,'combat' end
+ if not StyleKey(key) then return false,'value' end
+ local items=HC.FavoriteStyles();local found=false
+ for i=#items,1,-1 do if items[i]==key then table.remove(items,i);found=true end end
+ if not found then
+  if #items>=20 then return false,'favoriteLimit' end
+  items[#items+1]=key
+ end
+ HC.db.favorites=table.concat(items,',');HC.SaveActiveProfile();Refresh();return true
+end
+function HC.ApplyAppearance(key)
+ if not Allowed() then return false,'combat' end
+ local family,element=StyleKey(key);if not family then return false,'value' end
+ local snapshot=Snapshot(HC.db);snapshot.family=family;snapshot.element=element
+ if HC.elements[element].faction then snapshot.faction=HC.elements[element].faction end
+ Apply(snapshot);return true
+end
+local comfortPresets={
+ quiet={quietMode=true,finishCue=false,timeFormat='remaining',iconPosition='hidden',latency=false,castDelay=false,queueWindow=false,channelTicks=false},
+ readable={quietMode=false,finishCue=true,fontSize=16,font='modern',timeFormat='both',iconPosition='left'},
+ simple={quietMode=false,finishCue=true,fontSize=12,font='default',timeFormat='remaining',iconPosition='hidden',latency=false,castDelay=false,queueWindow=false,channelTicks=false},
+}
+function HC.ApplyComfortPreset(key)
+ if not Allowed() then return false,'combat' end
+ local preset=comfortPresets[key];if not preset then return false,'value' end
+ local snapshot=Snapshot(HC.db)
+ for field,value in pairs(preset) do snapshot[field]=value end
+ Apply(snapshot);return true
 end

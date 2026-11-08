@@ -3,16 +3,12 @@ local function L(text) return HC.L and HC.L(text) or text end
 local events = CreateFrame("Frame")
 -- Independent driver: instant-cast GCD must keep updating with the cast frame hidden.
 local driver = CreateFrame("Frame")
-local terminal = {
-    UNIT_SPELLCAST_STOP=true, UNIT_SPELLCAST_CHANNEL_STOP=true,
-    UNIT_SPELLCAST_FAILED=true, UNIT_SPELLCAST_FAILED_QUIET=true,
-    UNIT_SPELLCAST_INTERRUPTED=true,
-}
+local terminal = HC.CastState.terminalEvents
 local unitEvents = {
     "UNIT_SPELLCAST_START", "UNIT_SPELLCAST_DELAYED", "UNIT_SPELLCAST_STOP",
     "UNIT_SPELLCAST_CHANNEL_START", "UNIT_SPELLCAST_CHANNEL_UPDATE", "UNIT_SPELLCAST_CHANNEL_STOP",
     "UNIT_SPELLCAST_FAILED", "UNIT_SPELLCAST_FAILED_QUIET", "UNIT_SPELLCAST_INTERRUPTED",
-    "UNIT_SPELLCAST_SUCCEEDED",
+    "UNIT_SPELLCAST_SUCCEEDED", "UNIT_SPELLCAST_SENT",
 }
 function HC.Print(message) print("|cffc7a66aHanse Cast:|r " .. message) end
 local function Wake()
@@ -105,8 +101,7 @@ function HC.RefreshGCD()
 end
 function HC.Refresh(event)
     if not HC.ready or HC.preview then return end
-    local cast, reason=HC.ReadCurrent()
-    if HC.IsTerminated(cast,GetTime()) then cast=nil;reason="ended" end
+    local cast, reason=HC.CastState.Read(HC,"player",GetTime())
     HC.lastReason=reason
     if reason == "restricted" then HC.stats.restricted=HC.stats.restricted+1 end
     if reason == "error" then HC.stats.apiErrors=HC.stats.apiErrors+1 end
@@ -138,7 +133,11 @@ function HC.TogglePreview(mode)
     HC.preview=not HC.preview
     HC.previewMode=HC.preview and mode or nil
     HC.feedbackPreviewKey=nil
-    HC.cast=nil; HC.gcd=nil; HC.ClearCastResult(); HC.lastEnded=nil; HC.CancelPreviewDrag()
+    -- Preview changes invalidate queued work, but do not change the player
+    -- identity: retain terminal IDs so an old API record cannot reappear.
+    if HC.ResetComfortTiming then HC.ResetComfortTiming() end
+    HC.CastState.Invalidate(HC); HC.cast=nil; HC.lastEnded=nil
+    HC.gcd=nil; HC.ClearCastResult(); HC.CancelPreviewDrag()
     HC.UpdateSpellTheme(nil)
     HC.HideFinishCue()
     HC.UpdateBlizzard()
@@ -201,6 +200,7 @@ local function Start()
         elseif command=="diagnose" then
             HC.Print("Version "..HC.version)
             HC.PrintUnitStatus()
+            if HC.GetComfortDiagnostic then HC.Print(HC.GetComfortDiagnostic()) end
             HC.Print(L("Blizzard-Ziel: ")..L(HC.blizzardTargetStatus or "unverändert"))
             HC.Print(L("Blizzard-Fokus: ")..L(HC.blizzardFocusStatus or "unverändert"))
         elseif command=="test" then HC.TogglePreview()
@@ -256,19 +256,19 @@ events:SetScript("OnEvent",function(_, event, ...)
         HC.Refresh(); return
     end
     if event=="PLAYER_ENTERING_WORLD" then
-        HC.ClearCastResult(); HC.lastEnded=nil; HC.terminalCast=nil; HC.terminalCasts=nil; HC.Refresh(); return
+        if HC.ResetComfortTiming then HC.ResetComfortTiming() end
+        HC.ClearCastResult(); HC.CastState.Reset(HC); HC.Refresh(); return
     end
-    -- Registered for player only. Never inspect unit/castGUID/spellID payloads.
+    -- Registered for player only. Optional timing guards every inspected value.
+    if HC.ObserveComfortEvent then HC.ObserveComfortEvent(event,...) end
+    if event=="UNIT_SPELLCAST_SENT" then return end
+    -- Main lifecycle uses only the independently guarded castBarID.
     if HC.preview then
         HC.preview=false; HC.previewMode=nil; HC.CancelPreviewDrag(); HC.frame:EnableMouse(false); HC.frame.hint:Hide()
         HC.ClearCastResult();HC.HideEffects();HC.frame:Hide()
         if HC.UpdateOptions then HC.UpdateOptions() end
     end
-    local id
-    if event=="UNIT_SPELLCAST_CHANNEL_STOP" or event=="UNIT_SPELLCAST_INTERRUPTED" then
-        id=select(5,...)
-    else id=select(4,...) end
-    if not HC.Accessible(id) then id=nil end
+    local id=HC.CastState.EventID(event,...)
     if event=="UNIT_SPELLCAST_SUCCEEDED" then
         local completed=HC.cast
         if not HC.Matches(completed,id) then
@@ -285,7 +285,7 @@ events:SetScript("OnEvent",function(_, event, ...)
             HC.ShowFinishCue()
             HC.lastEnded=nil
         end
-        HC.RefreshGCD(); C_Timer.After(0,HC.Refresh)
+        HC.RefreshGCD(); HC.CastState.Reconcile(HC,HC.Refresh)
     elseif terminal[event] then
         local ended=HC.Matches(HC.cast,id) and HC.cast
             or (not HC.cast and HC.Matches(HC.lastEnded,id) and GetTime()<=HC.lastEnded.untilTime and HC.lastEnded)
@@ -312,7 +312,7 @@ events:SetScript("OnEvent",function(_, event, ...)
             end
             HC.UpdateBlizzard()
         end
-        C_Timer.After(0,HC.Refresh)
+        HC.CastState.Reconcile(HC,HC.Refresh)
     else
         HC.Refresh(event); QueueGCDRefresh(false)
     end

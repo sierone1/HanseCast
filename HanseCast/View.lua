@@ -156,6 +156,7 @@ function HC.ApplyLayout()
     if HC.ApplyComfortLayout then HC.ApplyComfortLayout() end
     if HC.RefreshLocale then HC.RefreshLocale() end
     HC.ApplyTheme();HC.effectsLastDraw=nil
+    if db.quietMode then HC.HideFinishCue();f.resultLight:Hide() end
     if HC.UpdateOptions then HC.UpdateOptions() end
 end
 
@@ -225,7 +226,7 @@ function HC.ShowCastResult(kind,cast,now)
     HC.frame.resultLight:SetPoint("BOTTOMLEFT",HC.frame.resultOverlay,"BOTTOMLEFT",HC.db.width*progress-size/2,(HC.db.height-size)/2)
     HC.frame.resultLight:SetVertexColor(unpack(style.color))
     HC.frame.resultLight:SetAlpha(kind=="cancelled" and .3 or .75)
-    if not HC.frame.resultLight.hcLoadFailed then HC.frame.resultLight:Show() end
+    if not HC.db.quietMode and not HC.frame.resultLight.hcLoadFailed then HC.frame.resultLight:Show() else HC.frame.resultLight:Hide() end
     Text(HC.frame.label,L(style.text));LabelColor(HC.frame.label,unpack(style.color))
     TimeInset(HC.frame,0)
     Text(HC.frame.time,"");HC.frame.hint:Hide();HC.frame:EnableMouse(false)
@@ -244,7 +245,9 @@ function HC.DrawGCD(gcd,now)
     local g=HC.gcdFrame
     if not g then return end
     if not HC.db.gcd or not gcd or gcd.finish<=now or gcd.finish<=gcd.start then g:Hide();return end
-    g.bar:SetMinMaxValues(0,gcd.finish-gcd.start);g.bar:SetValue(math.max(0,gcd.finish-now))
+    local duration=gcd.finish-gcd.start
+    if g.bar.hcDuration~=duration then g.bar:SetMinMaxValues(0,duration);g.bar.hcDuration=duration end
+    g.bar:SetValue(math.max(0,gcd.finish-now))
     g.label:SetShown(not HC.frame:IsShown())
     g:SetAlpha(HC.db.opacity or 1)
     g.hint:SetShown(HC.preview==true and not HC.frame:IsShown());g:Show()
@@ -253,7 +256,7 @@ function HC.HideFinishCue()
     if HC.finishFrame then HC.finishFrame:Hide();HC.finishFrame:SetScript("OnUpdate",nil) end
 end
 function HC.ShowFinishCue()
-    if not HC.db.finishCue then return end
+    if not HC.db.finishCue or HC.db.quietMode then HC.HideFinishCue();return end
     if HC.IsMaterialAvailable and not HC.IsMaterialAvailable() then return end
     local f=HC.finishFrame;local theme=HC.GetTheme()
     if f.horizontal.hcLoadFailed or f.vertical.hcLoadFailed then return end

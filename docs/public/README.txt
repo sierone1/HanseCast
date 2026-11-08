@@ -1,22 +1,27 @@
-Hanse Cast 1.0.4
+Hanse Cast 1.0.5
 WoW Forever 1.60.1 / Interface 16001
 
 DEUTSCH
-Nach dem Update /reload eingeben.
+Nach dem Update von 1.0.4 oder aelter WoW vollstaendig neu starten.
 /hansecast: Einstellungen. /hansecast diagnose: kompakte Diagnose.
-Ziel & Fokus: IN ARBEIT. Im Menü und im Addon deaktiviert.
-Blizzard zeigt Ziel/Fokus normal an. Separate kompakte Leisten sind geplant.
-Alte Profilwerte bleiben erhalten, können die Sperre aber nicht aufheben.
-Spielerleiste und GCD bleiben verfügbar. SavedVariables nicht löschen.
-Optionales Duration Lab bleibt separat; /hcduration off schaltet es aus.
-Native Spielprüfung dieser Version steht aus.
+Neu: Favoriten/Filter, Komfort-Vorlagen, ruhiger Modus, verbesserte Vorschau,
+optionale Start-Schaetzung und getrennte Warteschlangenanzeige.
+Start-Schaetzung ist keine exakte Serverlatenz; fehlende sichere Daten
+werden nicht ersetzt. Warteschlangen-Einstellung wird nur gelesen.
+Kanal-Hilfslinien bleiben manuell. Ziel/Fokus: IN ARBEIT und deaktiviert.
+Blizzard zeigt Ziel/Fokus normal an. SavedVariables nicht loeschen.
+Keine zusaetzlichen Addons erforderlich. Experimentelle Hilfsaddons fehlen.
+Der Nutzer bestaetigte den gebuendelten Spieltest des funktionsgleichen
+alpha.3-Kandidaten; keine Vollpruefung aller Klassen/Addonkombinationen.
 
 ENGLISH
-Type /reload after updating.
+Fully restart WoW after updating from 1.0.4 or earlier.
 /hansecast: settings. /hansecast diagnose: compact diagnostics.
-Target & focus: IN DEVELOPMENT. Disabled in both menu and addon runtime.
-Blizzard displays target/focus normally. Separate compact bars are planned.
-Previous profile values are retained but cannot bypass the release gate.
-Player bar and GCD remain available. Do not delete SavedVariables.
-Optional Duration Lab remains separate; disable it with /hcduration off.
-Native validation of this version remains pending.
+New: favourites/filters, comfort presets, reduced motion, improved preview,
+optional start estimate and separate read-only queue indicator.
+The start estimate is not exact server latency. Missing safe data is not
+guessed. Channel guides remain manual. Target/focus IN DEVELOPMENT,
+disabled in menu and runtime. Blizzard target/focus bars remain available.
+Do not delete SavedVariables. No dependencies or experimental helpers.
+The user confirmed the bundled gameplay check of the functionally identical
+alpha.3 candidate; this is not exhaustive class/addon compatibility testing.

@@ -15,7 +15,11 @@ Die Grafik behält ihre Form und wird mit dem Zauberfortschritt freigelegt. Posi
 - Rückmeldungen zu Abbruch, Unterbrechung und Fehlschlag, soweit die nötigen Informationen verfügbar sind.
 - Bis zu zwölf benannte Profile mit Kopierfunktion sowie validiertem Textimport und -export.
 - Optionale automatische Optik für unterstützte Zauber; unbekannte Zauber behalten die manuelle Auswahl.
-- Optionale Latenzmarkierung und manuell einstellbare Kanal-Hilfslinien.
+- Optik-Browser mit Filtern und bis zu 20 Favoriten pro Profil.
+- Komfort-Vorlagen „Einfach“, „Lesbar“ und „Ruhig“, ohne Position oder Optik zu ersetzen.
+- Ruhiger Modus ohne dekorative Bewegung und zusätzliche Lichtimpulse.
+- Optionale Weltlatenzmarkierung, geschätzte Zauberstart-Verzögerung und getrenntes Warteschlangenfenster.
+- Manuell einstellbare Kanal-Hilfslinien; keine automatische Tick-Erkennung.
 - Deutsche und englische Bedienung. Keine zusätzlichen Addons oder Bibliotheken erforderlich.
 
 ## Erste Schritte
@@ -26,22 +30,25 @@ Die Grafik behält ihre Form und wird mit dem Zauberfortschritt freigelegt. Posi
 4. **Positionieren** wählen, die Leiste verschieben und mit **Fertig – zurück zu Einstellungen** sperren und zurückkehren.
 5. Ziel & Fokus ist als „in Arbeit“ gesperrt. Für diese Einheiten bleiben die normalen Blizzard-Leisten verfügbar.
 
-Das kompakte Menü hat vier Reiter: **Spieler**, **Ziel & Fokus**, **Profile** und **Hilfe**. Die animierte Menüvorschau verwendet die Originalgrafiken und dieselbe Zeichenfunktion wie die Castbar. Sie zeigt die manuell gewählte Optik, nicht sämtliche Text- und Symboloptionen in Originalgröße. Änderungen gelten sofort für das aktive Profil; im Kampf sind Änderungen gesperrt.
+Das kompakte Menü hat vier Reiter: **Spieler**, **Ziel & Fokus**, **Profile** und **Hilfe**. Die animierte Menüvorschau verwendet die Originalgrafiken und dieselbe Zeichenfunktion wie die Castbar. Sie berücksichtigt die manuell gewählte Optik, Schrift, Zeitformat und Symbolposition und wird bei Bedarf verkleinert. Startmessung und Warteschlangenwerte werden nicht künstlich vorgetäuscht. Änderungen gelten sofort für das aktive Profil; im Kampf sind Änderungen gesperrt.
+
+Nach dem Update von 1.0.4 oder älter WoW vollständig neu starten, da ein Lua-Modul hinzugekommen ist. SavedVariables bleiben erhalten.
 
 Bei manueller Installation den Ordner `HanseCast` nach `Interface/AddOns` entpacken. Die Datei muss unter `Interface/AddOns/HanseCast/HanseCast.toc` liegen.
 
 - `/hansecast` – Einstellungen öffnen.
 - `/hansecast test` – Spielervorschau ein- oder ausschalten.
 - `/hansecast units` – Status „in Arbeit“ anzeigen; keine Vorschau.
+- `/hansecast diagnose` – kompakte Diagnose einschließlich optionaler Komfortanzeigen.
 - `/hansecast status` – Version und Diagnoseinformationen anzeigen.
 
 ## Kompatibilität und Prüfstand
 
-**Version 1.0.4 ist für WoW Forever 1.60.1, Interface 16001 vorgesehen.** Andere WoW-Ausgaben werden von diesem Paket derzeit nicht unterstützt.
+**Version 1.0.5 ist für WoW Forever 1.60.1, Interface 16001 vorgesehen.** Andere WoW-Ausgaben werden von diesem Paket derzeit nicht unterstützt.
 
-Lokale Tests mit simulierten Spielschnittstellen prüfen Zauberereignisse, Einstellungen, Profile, Grafikdarstellung und das Wiederherstellen verfügbarer Ressourcen. Frühere Versionen wurden im echten Spiel genutzt, einschließlich Bildzeitvergleichen und Speicherprüfungen nach Reload und Neustart. Damit ist nicht jede Klasse, jeder Zauber, jede Anzeigeskalierung oder Addonkombination in Version 1.0.4 geprüft. Eine bestimmte Leistung auf jedem Rechner wird nicht zugesichert.
+36 lokale Testsuiten prüfen die Spielschnittstellen simuliert. Der alpha.3-Kandidat bestand zusätzlich 5.000 simulierte Abläufe; der Nutzer bestätigte den gebündelten Spieltest am 08.11.2026 mit „funktioniert alles“. Version 1.0.5 übernimmt dieses Verhalten unverändert. Dies ist keine vollständige Abdeckung jeder Klasse, jedes Zaubers, jeder Anzeigeskalierung oder Addonkombination und kein gemessener nativer FPS-Gewinn.
 
-Die Spielerleiste benötigt zugängliche Zeitangaben. Ziel und Fokus sind vollständig deaktiviert; ihre bisherigen Einstellungen bleiben erhalten. Empower-Zauber werden nicht unterstützt. Kanal-Hilfslinien sind manuelle Markierungen. Die Latenzmarkierung ist eine Orientierung anhand gemeldeter Netzwerklatenz.
+Die Spielerleiste benötigt zugängliche Zeitangaben. Ziel und Fokus sind vollständig deaktiviert; ihre bisherigen Einstellungen bleiben erhalten. Empower-Zauber werden nicht unterstützt. Kanal-Hilfslinien sind manuelle Markierungen. Die Latenzmarkierung ist eine Orientierung anhand gemeldeter Weltlatenz. Die separate Start-Schätzung beruht nur auf sicher zugeordneten lokalen Ereignissen, nicht auf exakter Serverlatenz. Das hellblaue Warteschlangenfenster zeigt eine gelesene Client-Einstellung unter der Leiste; Hanse verändert sie nicht. Bei fehlenden oder geschützten Daten bleiben die Zusatzanzeigen leer.
 
 Das Ersetzen der normalen Spieler-Zauberleiste ist optional und zunächst ausgeschaltet. Blizzards Ziel- und Fokusframes bleiben erhalten. Bei mehreren aktiven Zauberleisten-Addons können sich Anzeigen überlagern. Dann eine der Anzeigen deaktivieren oder die Einstellungen anpassen.
 

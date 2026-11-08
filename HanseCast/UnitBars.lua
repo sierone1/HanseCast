@@ -6,8 +6,7 @@ local labels={target="Ziel",focus="Fokus"}
 local defaults={enabled=false,x=0,y=-95,width=300,height=28,scale=1,
     visibility="always",family="inherit",element="inherit",showIcon=false}
 local bounds={x={-10000,10000},y={-10000,10000},width={180,600},height={24,60},scale={.6,2}}
-local terminal={UNIT_SPELLCAST_STOP=true,UNIT_SPELLCAST_CHANNEL_STOP=true,
-    UNIT_SPELLCAST_FAILED=true,UNIT_SPELLCAST_FAILED_QUIET=true,UNIT_SPELLCAST_INTERRUPTED=true}
+local terminal=HC.CastState.terminalEvents
 local eventNames={"UNIT_SPELLCAST_START","UNIT_SPELLCAST_DELAYED","UNIT_SPELLCAST_STOP",
     "UNIT_SPELLCAST_CHANNEL_START","UNIT_SPELLCAST_CHANNEL_UPDATE","UNIT_SPELLCAST_CHANNEL_STOP",
     "UNIT_SPELLCAST_FAILED","UNIT_SPELLCAST_FAILED_QUIET","UNIT_SPELLCAST_INTERRUPTED",
@@ -107,7 +106,7 @@ local function identity(unit)
     if ok and HC.Accessible(guid) and type(guid)=="string" then return guid end
 end
 local function reset(s)
-    s.generation=s.generation+1;s.ended=nil;s.guid=nil
+    HC.CastState.Reset(s);s.guid=nil
     hide(s,"changed")
 end
 local function refresh(s)
@@ -119,19 +118,11 @@ local function refresh(s)
     local guid=identity(s.unit)
     if guid and s.guid and guid~=s.guid then reset(s) end
     s.guid=guid
-    local cast,why=HC.ReadCurrent(s.unit)
+    local now=GetTime()
+    local cast,why=HC.CastState.Read(s,s.unit,now)
     s.readReason=why;s.timerReason=nil
     if why=='restricted' then s.restricted=(s.restricted or 0)+1 end
     if why=='error' then s.apiErrors=(s.apiErrors or 0)+1 end
-    local now=GetTime()
-    if s.ended then
-        for i=#s.ended,1,-1 do
-            local ended=s.ended[i]
-            if now>ended.untilTime then table.remove(s.ended,i)
-            elseif cast and cast.id~=nil and cast.id==ended.id then cast=nil;why="ended" end
-        end
-        if #s.ended==0 then s.ended=nil end
-    end
     if not cast and why~='ended' and why~='unsupported' and HC.ReadUnitTimer then
         local native,timerReason=HC.ReadUnitTimer(s);s.timerReason=timerReason
         if native then cast=native;why='active' end
@@ -186,7 +177,7 @@ local function create(unit)
     local frame=CreateFrame("Frame",nil,UIParent)
     frame:SetFrameStrata("MEDIUM");frame:SetClampedToScreen(true);frame:SetMovable(true)
     frame:RegisterForDrag("LeftButton");frame:EnableMouse(false)
-    local s={unit=unit,frame=frame,generation=0,reason="disabled"}
+    local s={unit=unit,frame=frame,generation=0,reason="disabled",terminalMinimum=1,terminalGrace=1}
     s.effects=HC.CreateEffects(frame,true)
     s.timer=CreateFrame('StatusBar',nil,frame)
     s.timer:SetPoint('CENTER',frame,'CENTER',0,0)
@@ -253,11 +244,8 @@ function HC.PreviewUnitBars(enabled,unit)
     wake();return true
 end
 local function reconcile(s)
-    if s.queued then return end
-    s.queued=true;local generation=s.generation
-    C_Timer.After(0,function()
-        s.queued=false
-        if generation==s.generation and not HC.unitBarsPreview then refresh(s);wake() end
+    HC.CastState.Reconcile(s,function()
+        if not HC.unitBarsPreview then refresh(s);wake() end
     end)
 end
 function HC.InitializeUnitBars()
@@ -292,13 +280,9 @@ function HC.InitializeUnitBars()
         if unit~="target" and unit~="focus" then return end
         local s=HC.unitBars[unit]
         if terminal[event] then
-            local id
-            if event=="UNIT_SPELLCAST_INTERRUPTED" or event=="UNIT_SPELLCAST_CHANNEL_STOP" then id=select(4,...)
-            else id=select(3,...) end
-            if HC.Accessible(id) and id~=nil and s.cast and s.cast.id~=nil and id==s.cast.id then
-                s.ended=s.ended or {}
-                s.ended[#s.ended+1]={id=id,untilTime=math.max(GetTime()+2,s.cast.finish+1)}
-                if #s.ended>16 then table.remove(s.ended,1) end
+            local id=HC.CastState.EventID(event,unit,...)
+            if HC.Matches(s.cast,id) then
+                HC.CastState.Remember(s,s.cast,GetTime())
                 hide(s,"ended")
             end
             reconcile(s)

@@ -15,31 +15,38 @@ Choose from **145 visual variants**: 27 class-inspired styles and two faction-in
 - Up to twelve named profiles, with validated text import and export.
 - German and English interface.
 - Optional spell-based visual selection; unknown spells keep your manual selection.
-- Optional latency marker and manually configured channel guide lines.
+- Appearance browser with filters and up to 20 favourites per profile.
+- Simple, Readable and Quiet comfort presets that preserve position and artwork.
+- Reduced motion mode without decorative motion or extra light pulses.
+- Optional world-latency marker, cast-start delay estimate and separate queue setting indicator.
+- Manual channel guide lines; no automatic tick detection.
 - No additional addon or runtime library required.
 
 ## Getting started
 
 Install the addon and fully restart WoW. Open **Settings → AddOns → Hanse Cast**, or type `/hansecast`.
 
-The compact menu has four tabs: **Player**, **Target & focus**, **Profiles**, and **Help**. Frequently used settings are visible immediately; expand **More settings** for text, icons and fine adjustments. Hover over a setting for an explanation. The animated menu sample uses the addon's original textures and renderer; it shows the manual artwork selection, not every text/icon setting at full scale.
+The compact menu has four tabs: **Player**, **Target & focus**, **Profiles**, and **Help**. Frequently used settings are visible immediately; expand **More settings** for text, icons and fine adjustments. Hover over a setting for an explanation. The animated menu sample uses the addon's original textures and renderer; it reflects the manual artwork selection, font, time format and icon position, scaled down as needed. It does not invent live start-delay or queue measurements.
 
 Use **Position** to place a bar in the game world, then **Done – back to settings** to lock it and return. Target and focus are disabled in both the menu and runtime; separate compact bars are planned. Changes apply immediately to the active profile. Settings changes are locked during combat.
 
 - `/hansecast` - Open settings.
 - `/hansecast test` - Toggle the player-bar preview.
 - `/hansecast units` - Show the development status; previews are disabled.
+- `/hansecast diagnose` - Compact diagnostics including optional comfort indicators.
 - `/hansecast status` - Show version and diagnostic information.
+
+Fully restart WoW after updating from 1.0.4 or earlier, because a Lua module has been added. Preserve SavedVariables.
 
 For manual installation, extract the `HanseCast` folder into `Interface/AddOns`. The resulting path must be `Interface/AddOns/HanseCast/HanseCast.toc`.
 
 ## Compatibility and limits
 
-**Version 1.0.4 targets WoW Forever 1.60.1, interface 16001.** Other WoW editions are not currently supported by this package.
+**Version 1.0.5 targets WoW Forever 1.60.1, interface 16001.** Other WoW editions are not currently supported by this package.
 
-Local simulated-client tests cover cast events, settings, profiles, artwork rendering and resource recovery. Earlier versions were used in live gameplay, including frame-time comparisons and reload/restart persistence checks. These checks do not cover every class, spell, display scale or addon combination in version 1.0.4. Performance on every system is not guaranteed.
+36 local simulated-client suites check the release. The alpha.3 candidate also passed 5,000 simulated controller cycles, and the user reported the bundled in-game checks successful on 8 November 2026. Version 1.0.5 preserves that behaviour. These checks do not cover every class, spell, display scale or addon combination and do not establish a native FPS improvement.
 
-The player bar requires readable timing. Target and focus are fully disabled; previous settings are retained. Empower casts are unsupported. Channel guides are manual markers. The latency marker is guidance based on reported network latency.
+The player bar requires readable timing. Target and focus are fully disabled; previous settings are retained. Empower casts are unsupported. Channel guides are manual markers. The latency marker is guidance based on reported world latency. The separate start estimate uses safely matched local events, not exact server latency. A cyan queue guide below the bar reflects a read-only client setting. Missing or inaccessible data leaves these indicators unavailable.
 
 The optional replacement of the default player cast bar is disabled initially. Blizzard target and focus frames are left in place. When testing alongside another cast-bar addon, temporarily disable the other cast-bar addon to avoid overlapping displays.
 

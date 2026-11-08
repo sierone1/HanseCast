@@ -44,6 +44,7 @@ function HC.SetMenuValue(key,value,unit)
   local ok,why=HC.ConfigureUnitBar(unit,{[key]=value});if not ok then return false,why end
  else
   if key=='autoSpellVisual' and HC.elements[HC.db.element].faction then return false,'value' end
+  if key=='castDelay' and HC.db[key]~=value and HC.ResetComfortTiming then HC.ResetComfortTiming() end
   HC.db[key]=value
   if key=='element' and HC.elements[value].faction then HC.db.faction=HC.elements[value].faction end
  end
@@ -118,10 +119,14 @@ local function Dropdown(h,anchor,items,chosen,action)
   p.scroll=CreateFrame('ScrollFrame',nil,p,'UIPanelScrollFrameTemplate');p.scroll:SetPoint('TOPLEFT',8,-8);p.scroll:SetPoint('BOTTOMRIGHT',-28,8)
   p.child=CreateFrame('Frame',nil,p.scroll);p.child:SetSize(300,30);p.scroll:SetScrollChild(p.child);p.buttons={}
  end
- p:ClearAllPoints();p:SetPoint('TOPLEFT',anchor,'BOTTOMLEFT',0,-2);p:SetSize(336,math.min(250,#items*30+16));p.child:SetHeight(#items*30);p.scroll:SetVerticalScroll(0)
+ p:ClearAllPoints();p:SetPoint('TOPLEFT',anchor,'BOTTOMLEFT',0,-2);p:SetSize(items.wide and 460 or 336,math.min(250,#items*30+16));p.child:SetWidth(items.wide and 424 or 300);p.child:SetHeight(#items*30);p.scroll:SetVerticalScroll(0)
  for i,item in ipairs(items) do
   local b=p.buttons[i]
   if not b then b=Button(p.child,'',function() end,true);b:SetSize(296,28);b:SetPoint('TOPLEFT',0,-(i-1)*30);p.buttons[i]=b end
+  b:SetWidth(items.wide and 420 or 296)
+  b:SetNormalFontObject(items.wide and 'GameFontHighlightSmall' or 'GameFontNormal')
+  b:SetHighlightFontObject(items.wide and 'GameFontHighlightSmall' or 'GameFontHighlight')
+  Tooltip(b,item[2],item[2])
   b:SetText((item[1]==chosen and '|cffffd080> |r' or '')..T(item[2]))
   local value=item[1];b:SetScript('OnClick',function() p:Hide();if Allowed() then action(value) end end);b:Show()
  end
@@ -222,10 +227,52 @@ local function Groups() local r={};for _,g in ipairs(HC.visualGroups) do r[#r+1]
 local function Elements(group)
  local r={};for _,g in ipairs(HC.visualGroups) do if g.key==group then for _,k in ipairs(g.elements) do r[#r+1]={k,HC.elements[k].title} end end end;return r
 end
+function HC.AppearanceChoices(filter)
+ local list={wide=true}
+ local group=HC.GetVisualGroup(HC.db.element).key
+ for _,family in ipairs(families) do
+  for _,g in ipairs(HC.visualGroups) do
+   for _,element in ipairs(g.elements) do
+    local key=family[1]..':'..element
+    if filter~='favorites' or HC.IsFavoriteStyle(key) then
+     if filter~='group' or g.key==group then
+      list[#list+1]={key,T(family[2])..' / '..T(g.title)..': '..T(HC.elements[element].title)}
+     end
+    end
+   end
+  end
+ end
+ return list
+end
 local function Build(h)
  local active=function() return T(S('Aktives Profil: ','Active profile: '))..HC.db.activeProfile end
  Toggle(h,'overview','hideBlizzard',S('Blizzard-Spielerleiste ersetzen','Replace Blizzard player bar'),S('Bei passenden Hanse-Cast-Zaubern ausblenden. Bei fehlenden Daten/Grafiken bleibt die Standardanzeige verfügbar. Ziel-/Fokusframes bleiben erhalten.','Hide during valid Hanse Cast spells. Missing data/artwork keeps the default display available. Target/focus frames remain.'),'hideBlizzard')
 
+ local filter=Field(h,'appearance','appearanceFilter',S('Optiken filtern','Filter appearances'),S('Alle Varianten, aktuelle Themengruppe oder deine Favoriten. Der Filter ändert keine Optik.','All variants, current theme group or your favourites. Filtering does not change the appearance.'),{{'all',S('Alle Optiken','All appearances')},{'group',S('Aktuelle Themengruppe','Current theme group')},{'favorites',S('Nur Favoriten','Favourites only')}},'element')
+ filter.get=function() return h.appearanceFilter or 'all' end
+ filter.select=function(value)
+  if value~='all' and value~='group' and value~='favorites' then return end
+  h.appearanceFilter=value;ClosePopup(h);HC.UpdateOptions()
+ end
+ local browser=Field(h,'appearance','appearanceBrowse',S('Optik auswählen','Choose appearance'),S('Kategorie und Optik gemeinsam auswählen. Favoriten werden pro Profil gespeichert.','Select category and appearance together. Favourites are saved per profile.'),function() return HC.AppearanceChoices(h.appearanceFilter) end,'element')
+ browser.get=function() return HC.db.family..':'..HC.db.element end
+ browser.select=function(value) Result(h,HC.ApplyAppearance(value)) end
+ local refreshBrowser=browser.refresh
+ browser.refresh=function()
+  refreshBrowser()
+  local items=browser.items();local found=false
+  for _,item in ipairs(items) do if item[1]==browser.get() then found=true end end
+  if found then
+   browser.button:SetText(T(HC.GetVisualGroup(HC.db.element).title)..': '..T(HC.elements[HC.db.element].title)..'  >')
+  end
+  browser.button:SetNormalFontObject('GameFontHighlightSmall');browser.button:SetHighlightFontObject('GameFontHighlightSmall')
+  if #items==0 then browser.button:SetText(T(S('Noch keine Favoriten','No favourites yet')))
+  elseif not found then browser.button:SetText(T(S('Auswahl außerhalb des Filters','Selection outside filter'))..'  >') end
+ end
+ browser.enabled=function() return #browser.items()>0 end
+ Action(h,'appearance','favorite',S('Aktuelle Optik merken','Remember current appearance'),S('Bis zu 20 Kombinationen aus Kategorie und Optik pro Profil.','Up to 20 category/appearance combinations per profile.'),function()
+  return T(HC.IsFavoriteStyle(HC.db.family..':'..HC.db.element) and S('Favorit entfernen','Remove favourite') or S('Als Favorit speichern','Save favourite'))
+ end,function() Result(h,HC.ToggleFavoriteStyle(HC.db.family..':'..HC.db.element)) end)
  Field(h,'appearance','family',S('Kategorie','Category'),S('Grafischer Aufbau und Effekte. Zauberzeit und Spielmechanik bleiben gleich.','Visual structure and effects. Spell duration and mechanics remain unchanged.'),families,'family')
  local g=Field(h,'appearance','group',S('Themengruppe','Theme group'),S('Alle Klassenoptiken sind frei wählbar. Fraktionsoptiken wählen auch das passende Wappen.','All class styles are available. Faction styles also select the matching emblem.'),Groups,'element')
  g.get=function() return HC.GetVisualGroup(HC.db.element).key end
@@ -245,15 +292,26 @@ local function Build(h)
  Number(h,'layout','x','Position X',S('Vom Bildschirmzentrum: negativ links, positiv rechts. Auf den sichtbaren Bereich begrenzt.','From screen centre: negative left, positive right. Limited to the visible area.'),'x',-10000,10000,1)
  Number(h,'layout','y','Position Y',S('Vom Bildschirmzentrum: negativ unten, positiv oben.','From screen centre: negative down, positive up.'),'y',-10000,10000,1)
  Action(h,'layout','move',S('Verschieben','Move'),S('Linke Maustaste zum Ziehen. Fertig sperrt die Leiste wieder.','Drag with the left mouse button. Done locks the bar again.'),S('Im Spiel positionieren','Position in game'),function() HC.StartMenuPreview(h,'player') end)
+ Action(h,'layout','centerHorizontal',S('Horizontal ausrichten','Horizontal alignment'),S('Setzt nur die horizontale Position auf die Bildschirmmitte; Höhe und Gestaltung bleiben erhalten.','Sets only the horizontal position to screen centre; vertical position and appearance are preserved.'),S('Mittig ausrichten','Centre horizontally'),function() Result(h,HC.SetMenuValue('x',0)) end)
  Action(h,'layout','resetPosition',S('Nur Position zurücksetzen','Reset position only'),S('Gestaltung und andere Profile bleiben erhalten.','Appearance and other profiles are preserved.'),S('Spielerposition zurücksetzen','Reset player position'),function() HC.SetMenuValue('x',0);HC.SetMenuValue('y',-180) end)
 
+ local preset=Field(h,'comfort','comfortPreset',S('Komfort-Vorlage','Comfort preset'),S('Ändert die genannten Komfortwerte im aktiven Profil. Position, Größe, Optik und Favoriten bleiben erhalten.','Changes the listed comfort settings in the active profile. Position, size, appearance and favourites are preserved.'),{{'simple',S('Einfach: Standardtext, Restzeit, ohne Extras','Simple: standard text, remaining time, no extras')},{'readable',S('Lesbar: Schrift 16, beide Zeiten, Symbol links','Readable: font 16, both times, icon left')},{'quiet',S('Ruhig: ohne Bewegung, Licht und Extras','Quiet: no motion, light or extras')}},'element')
+ preset.get=function() return '' end
+ preset.refresh=function() preset.button:SetText(T(S('Vorlage auswählen …','Choose preset …'))) end
+ preset.select=function(value)
+  if value~='simple' and value~='readable' and value~='quiet' then return end
+  Confirm(h,S('Komfortwerte im aktiven Profil durch diese Vorlage ersetzen? Position, Größe und Optik bleiben erhalten.','Replace comfort settings in the active profile with this preset? Position, size and appearance are preserved.'),function() Result(h,HC.ApplyComfortPreset(value)) end)
+ end
  Field(h,'comfort','font','Schrift',S('Schrift für die Spielerleiste.','Font for the player bar.'),{{'default','Standard'},{'modern','Modern'}},'font')
  Number(h,'comfort','fontSize','Schriftgröße',S('Schriftgröße für die Spielerleiste. Die Leistenskalierung wirkt zusätzlich.','Font size for the player bar. Bar scale also applies.'),'fontSize',10,20,1)
  Field(h,'comfort','timeFormat',S('Zeitanzeige','Time display'),'',{{'remaining','Restzeit'},{'elapsed','Verstrichen'},{'both','Beides'},{'hidden','Aus'}},'timeFormat')
  Number(h,'comfort','opacity','Deckkraft',S('Sichtbarkeit der Spielerleiste in Prozent.','Player bar visibility in percent.'),'opacity',20,100,10,100)
  Field(h,'comfort','iconPosition','Zaubersymbol','',{{'hidden','Aus'},{'left','Links'},{'right','Rechts'}},'iconPosition')
  Toggle(h,'comfort','gcd',S('Globale Abklingzeit (GCD)','Global cooldown (GCD)'),S('Die kurze gemeinsame Abklingzeit vieler Fähigkeiten als schmale Linie.','The brief shared cooldown of many abilities as a thin line.'),'gcd')
+ Toggle(h,'comfort','quietMode',S('Ruhiger Modus','Reduced motion'),S('Stoppt dekorative Bewegung und zusätzliche Lichtimpulse. Der Zauberfortschritt bleibt flüssig.','Stops decorative motion and extra light pulses. Cast progress stays smooth.'),'quietMode')
  Toggle(h,'comfort','finishCue',S('Lichtimpuls beim Abschluss','Completion light pulse'),S('Kurzer zusätzlicher Lichtimpuls nach erfolgreichem Abschluss.','Brief extra light pulse after successful completion.'),'finishCue')
+ Toggle(h,'comfort','castDelay',S('Zauberstart-Verzögerung','Cast start delay estimate'),S('Start ~N ms nur bei sicher zugeordnetem Sende- und Startereignis. Schätzwert, keine Serverlatenz.','Start ~N ms only for safely matched sent/start events. An estimate, not server latency.'),'castDelay')
+ Toggle(h,'comfort','queueWindow',S('Zauberwarteschlange','Spell queue window'),S('Separater cyanfarbener Hinweis unter der Leiste anhand der zugänglichen Client-Einstellung. Die Weltlatenz bleibt getrennt darüber.','Separate cyan guide below the bar from the accessible client setting. World latency remains separate above it.'),'queueWindow')
  Toggle(h,'comfort','latency','Latenzmarkierung',S('Orientierung anhand der Weltlatenz; kein exaktes Eingabe- oder Zauberwarteschlangenfenster.','Guidance based on world latency; not an exact input or spell queue window.'),'latency')
  Toggle(h,'comfort','channelTicks',S('Manuelle Kanal-Hilfslinien','Manual channel guides'),S('Gleichmäßige Unterteilung, keine erkannten Schadens- oder Heilticks.','Equal segments, not detected damage or healing ticks.'),'channelTicks')
  Number(h,'comfort','channelTickCount','Anzahl Abschnitte',S('Nur bei eingeschalteten Kanal-Hilfslinien verfügbar.','Available when channel guides are enabled.'),'channelTickCount',2,10,1,1,nil,function() return HC.db.channelTicks end)
@@ -349,7 +407,9 @@ local function MenuPreview(h)
  p.bar=CreateFrame('Frame',nil,p);p.bar:SetPoint('BOTTOMLEFT',8,14)
  p.effects=HC.CreateEffects(p.bar,true)
  p.name=Label(p.bar,'','GameFontHighlightSmall');p.name:SetPoint('BOTTOMLEFT',p.bar,'TOPLEFT',0,4)
- p.time=Label(p.bar,'','GameFontHighlightSmall');p.time:SetPoint('BOTTOMRIGHT',p.bar,'TOPRIGHT',0,4)
+ p.time=Label(p.bar,'','GameFontHighlightSmall');p.time:SetPoint('BOTTOMRIGHT',p.bar,'TOPRIGHT',0,4);p.time:SetJustifyH('RIGHT')
+ p.timeCache={}
+ p.icon=p.bar:CreateTexture(nil,'ARTWORK');p.iconLoaded=p.icon:SetTexture('Interface\\Icons\\INV_Misc_QuestionMark')~=false;p.icon:SetTexCoord(.08,.92,.08,.92);p.icon:Hide()
  p.gcd=p.bar:CreateTexture(nil,'BACKGROUND');p.gcd:SetPoint('TOPLEFT',p.bar,'BOTTOMLEFT',0,-5);p.gcd:SetColorTexture(.5,.5,.5,.6)
  p.place=Button(p,S('Positionieren','Position'),function() HC.StartMenuPreview(h,'player') end)
  p.place:SetSize(138,24);p.place:SetPoint('BOTTOMRIGHT',0,4)
@@ -363,16 +423,25 @@ local function MenuPreview(h)
   end
   local width=math.max(180,math.min(db.width,600));local height=db.height
   local scale=math.min(db.scale,math.max(.3,(h.content:GetWidth()-170)/width),36/height)
-  local layout=width..':'..height..':'..scale
+  local layout=width..':'..height..':'..scale..':'..(db.iconPosition or 'hidden')
   if p.layout~=layout then
    p.layout=layout;p.bar:SetSize(width,height);p.bar:SetScale(scale);HC.LayoutEffects(width,height,p.effects)
-   p.name:SetWidth(math.max(60,width-80));p.name:SetWordWrap(false)
+   p.name:SetWordWrap(false);p.time:SetWordWrap(false)
+   local iconSize=math.max(16,math.min(28,height));p.icon:SetSize(iconSize,iconSize);p.icon:ClearAllPoints()
+   local right=db.iconPosition=='right';p.icon:SetPoint(right and 'LEFT' or 'RIGHT',p.bar,right and 'RIGHT' or 'LEFT',right and 6 or -6,0)
   end
+  local fontKey=(db.font or 'default')..':'..(db.fontSize or 12)
+  if p.fontKey~=fontKey then p.fontKey=fontKey;HC.ApplyCastFont(p.name);HC.ApplyCastFont(p.time) end
   local now=GetTime();local progress=(now%3)/3
   HC.DrawEffects(progress,now,p.effects,p.theme)
   local available=HC.IsMaterialAvailable(p.effects)
   p.name:SetText(available and T(HC.elements[db.element].title) or T(S('Grafik nicht verfügbar','Artwork unavailable')))
-  p.time:SetText(available and string.format('%.1f s',3*(1-progress)) or '')
+  local sample={start=now-now%3,finish=now-now%3+3}
+  local text,inset=HC.FormatCastTime(sample,now,3*(1-progress),3,p.timeCache)
+  if p.timeText~=text or p.timeAvailable~=available then p.timeText=text;p.timeAvailable=available;p.time:SetText(available and text or '') end
+  inset=inset*(db.fontSize or 12)/12
+  if p.textInset~=inset or p.textWidth~=width then p.textInset=inset;p.textWidth=width;p.name:SetWidth(math.max(30,width-inset)) end
+  p.icon:SetShown(available and p.iconLoaded and db.iconPosition~='hidden')
   p.bar:SetAlpha(db.opacity or 1);p.gcd:SetSize(width*(1-progress),2);p.gcd:SetShown(db.gcd and available)
  end
  p.tick=function(_,elapsed)
@@ -408,7 +477,7 @@ function HC.CreateMenuCanvas(parent,native)
  d.cancel=Button(d,'',function() d:Hide();HC.UpdateOptions() end);d.cancel:SetSize(190,30);d.cancel:SetPoint('BOTTOMLEFT',20,18)
  Build(h)
  local more=Action(h,'player','more',S('Weitere Einstellungen','More settings'),S('Schrift, Symbole, Akzente und genaue Position.','Font, icons, accents and exact position.'),function() return T(h.expanded and S('Weniger anzeigen','Show less') or S('Weitere Einstellungen …','More settings …')) end,function() h.expanded=not h.expanded;ClosePopup(h);HC.UpdateOptions() end)
- local order={'family','group','element','autoSpellVisual','width','height','scale','gcd','finishCue','hideBlizzard','more'}
+ local order={'appearanceFilter','appearanceBrowse','favorite','family','group','element','autoSpellVisual','width','height','scale','gcd','finishCue','hideBlizzard','more'}
  local basic={};local ordered={}
  for _,id in ipairs(order) do basic[id]=true;ordered[#ordered+1]=h.controls[id] end
  for _,r in ipairs(h.rows) do if not basic[r.id] then r.advanced=r.page=='player';ordered[#ordered+1]=r end end

@@ -404,7 +404,7 @@ local function DrawStaticMaterial(e,progress,now)
     -- Only a soft light mask travels. The source body, glow and their UVs never move.
     local phase=(now%7)/7
     Rect(e.staticLightMask,e.canvas,w*(-.35+phase*1.7),0,w*.35,h)
-    Visible(e.staticLight,not e.staticLightMask.hcTextureUnavailable)
+    Visible(e.staticLight,not (HC.db and HC.db.quietMode) and not e.staticLightMask.hcTextureUnavailable)
     e.localTipWidth=w*.03
 end
 function HC.DrawEffects(progress,now,instance,instanceTheme)
@@ -412,6 +412,8 @@ function HC.DrawEffects(progress,now,instance,instanceTheme)
     progress=max(0,min(1,progress));now=now or 0
     local theme=instanceTheme or HC.GetTheme();SelectMaterial(e,theme)
     if e.materialUnavailable then HC.HideEffects(e);return end
+    -- Only decoration is clocked at 30 Hz. Reveal/progress remains per frame.
+    now=HC.db and HC.db.quietMode and 0 or math.floor(now*30)/30
     if e.staticMaterial then DrawStaticMaterial(e,progress,now);return end
     if theme.classMaterial then DrawClassMaterial(e,theme,progress,now);return end
     local motion=MOTION[theme.family] or MOTION.element

@@ -23,35 +23,10 @@ function HC.TrackCastTiming(previous,current,event,now)
     end
 end
 
+-- Compatibility wrappers keep presentation code independent of state storage.
 function HC.RememberTerminal(cast,now,confirmed)
-    local record={id=cast.id,name=cast.name,start=cast.start,finish=cast.finish,spellID=cast.spellID,
-        channel=cast.channel,succeeded=cast.succeeded,stoppedAt=cast.stoppedAt or now,untilTime=cast.untilTime or now+0.3}
-    HC.lastEnded=record
-    if confirmed~=false and cast.id~=nil then
-        local history=HC.terminalCasts or {}
-        HC.terminalCasts=history
-        for i=#history,1,-1 do
-            if history[i].untilTime<now or history[i].id==cast.id then table.remove(history,i) end
-        end
-        local terminal={id=cast.id,untilTime=math.max(now,cast.finish)+0.5}
-        history[#history+1]=terminal
-        -- Rapid cancels can leave more than one old API record in flight.
-        -- Keep bounded identities only; this is not a cast/event log.
-        if #history>16 then table.remove(history,1) end
-        HC.terminalCast=terminal
-    end
-    return record
+    return HC.CastState.Remember(HC,cast,now,confirmed)
 end
-
 function HC.IsTerminated(cast,now)
-    if HC.terminalCast and now>HC.terminalCast.untilTime then HC.terminalCast=nil end
-    local history=HC.terminalCasts
-    if not history then return false end
-    local matched=false
-    for i=#history,1,-1 do
-        local terminal=history[i]
-        if now>terminal.untilTime then table.remove(history,i)
-        elseif cast and HC.Matches(cast,terminal.id) then matched=true end
-    end
-    return matched
+    return HC.CastState.IsTerminated(HC,cast,now)
 end
