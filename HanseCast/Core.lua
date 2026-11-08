@@ -1,5 +1,5 @@
 local _, HC = ...
-HC.version = "0.9.1"
+HC.version = "1.0.0"
 HC.defaults = { schema = 3, x = 0, y = -180, width = 300, height = 32, scale = 1,
     theme = "modern", family = "element", element = "frost", identity = "class", faction = "none",
     gcd = true, hideBlizzard = false, finishCue = true, autoSpellVisual = false }

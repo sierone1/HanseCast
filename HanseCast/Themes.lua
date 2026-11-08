@@ -90,6 +90,15 @@ local function Accent(base,color,weight)
         base[3]*(1-weight)+color[3]*weight,base[4] or 1}
 end
 
+-- Tint existing secondary glow only; never recolor the painted main material.
+-- Shared with independent menu previews, without changing player theme state.
+function HC.GetIdentityTint(identity)
+    local white={1,1,1,1}
+    if identity~="class" then return white end
+    local _,color=Identity(UnitClass,classAccents)
+    return Accent(white,color,0.18)
+end
+
 function HC.ResolveTheme()
     local family=HC.families[HC.db.family] and HC.db.family or "element"
     local selected=HC.ResolveSpellVisual and HC.ResolveSpellVisual(HC.themeCast) or HC.db.element
@@ -106,7 +115,7 @@ function HC.ResolveTheme()
     return {family=family,element=element,title=HC.families[family].title.." / "..palette.title,
         identityLabel=identity,cast=palette.color,channel=palette.color,gcd=palette.color,
         bright=palette.bright,secondary=palette.secondary,secondaryBright=secondaryBright,
-        ghost=ghost,classMaterial=palette.classMaterial,rail=2,texture="Interface\\Buttons\\WHITE8X8"}
+        ghost=ghost,accentTint=HC.GetIdentityTint(HC.db.identity),classMaterial=palette.classMaterial,rail=2,texture="Interface\\Buttons\\WHITE8X8"}
 end
 
 function HC.UpdateSpellTheme(cast)

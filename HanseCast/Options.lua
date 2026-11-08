@@ -1,286 +1,567 @@
-local _, HC = ...
-local L=function(text) return HC.L and HC.L(text) or text end
-local texture="Interface\\Buttons\\WHITE8X8"
-local families={
-    {"element","Elementstrom"},{"splinter","Splitter & Funken"},{"silk","Seidenfluss"},
-    {"pulse","Impuls"},{"mist","Nebellicht"},
+local _,HC=...
+-- One settings model, shared by the native canvas and standalone fallback.
+-- No schema migration and no writes merely from opening a page.
+local function S(de,en) return {de,en} end
+local function T(v)
+ if type(v)=='function' then return v() end
+ if type(v)=='table' then return v[HC.GetLanguage and HC.GetLanguage()=='enUS' and 2 or 1] end
+ return HC.L and HC.L(v) or v
+end
+local pageNames={
+ {'player',S('Spieler','Player')},
+ {'units',S('Ziel & Fokus','Target & focus')},{'profiles',S('Profile','Profiles')},
+ {'help',S('Hilfe','Help')},
 }
-
-local identities={{"neutral","Neutral"},{"class","Klasse"}}
-local factions={{"none","Neutral"},{"alliance","Allianz"},{"horde","Horde"}}
-local function Caption(list,key)
-    for _,item in ipairs(list) do if item[1]==key then return L(item[2]) end end
-    return L(list[1][2])
+local function Page(key)
+ if key=='overview' or key=='appearance' or key=='layout' or key=='comfort' then return 'player' end
+ return key
 end
+local families={{'element','Elementstrom'},{'splinter','Splitter & Funken'},{'silk','Seidenfluss'},{'pulse','Impuls'},{'mist','Nebellicht'}}
+local hosts={};HC.menuHosts=hosts
+local updating=false
+local function Allowed() return not InCombatLockdown() end
+local function ClosePopup(h) if h.popup then h.popup:Hide() end end
+local messages={
+ combat=S('Im Kampf sind Änderungen gesperrt.','Changes are locked during combat.'),
+ invalidName=S('Name: 1–48 Bytes, nicht leer; keine Steuerzeichen oder | = \\.','Name: 1–48 bytes, not blank; no control characters or | = \\.'),
+ duplicate=S('Dieser Profilname ist bereits vergeben.','This profile name is already in use.'),
+ limit=S('Alle zwölf Profilplätze sind belegt.','All twelve profile slots are occupied.'),
+ last=S('Das letzte Profil kann nicht gelöscht werden.','The last profile cannot be deleted.'),
+ empty=S('Bitte zuerst den Importtext prüfen.','Check the import text first.'),
+ name=S('Das ausgewählte Profil existiert nicht mehr.','The selected profile no longer exists.'),
+}
+local function Status(h,message) h.message=message;HC.UpdateOptions() end
+local function Result(h,ok,reason)
+ Status(h,ok and S('Erledigt.','Done.') or messages[reason] or S('Ungültige Daten. Keine Änderung.','Invalid data. Nothing changed.'))
+end
+function HC.SetMenuValue(key,value,unit)
+ if not Allowed() then return false,'combat' end
+ local specKey=unit and ('unitBars.'..unit..'.'..key) or key
+ if not HC.ValidProfileValue or not HC.ValidProfileValue(specKey,value) then return false,'value' end
+ if unit then
+  if unit~='target' and unit~='focus' then return false,'value' end
+  local ok,why=HC.ConfigureUnitBar(unit,{[key]=value});if not ok then return false,why end
+ else
+  if key=='autoSpellVisual' and HC.elements[HC.db.element].faction then return false,'value' end
+  HC.db[key]=value
+  if key=='element' and HC.elements[value].faction then HC.db.faction=HC.elements[value].faction end
+ end
+ if HC.ApplyLayout then HC.ApplyLayout() end
+ if HC.UpdateSpellTheme then HC.UpdateSpellTheme(HC.preview and nil or HC.cast) end
+ if HC.ApplyTheme then HC.ApplyTheme() end
+ if HC.RefreshUnitBars then HC.RefreshUnitBars() end
+ if HC.UpdateBlizzard then HC.UpdateBlizzard() end
+ if HC.Refresh then HC.Refresh() end
+ if HC.RefreshGCD then HC.RefreshGCD() end
+ if HC.SaveActiveProfile then HC.SaveActiveProfile() end
+ if key=='language' and HC.RefreshLocale then HC.RefreshLocale() end
+ HC.UpdateOptions();return true
+end
+local function Label(parent,value,font)
+ local f=parent:CreateFontString(nil,'OVERLAY',font or 'GameFontHighlight')
+ f:SetJustifyH('LEFT');f:SetWordWrap(true);f:SetText(T(value));return f
+end
+local function Button(parent,value,action,selector)
+ local b=CreateFrame('Button',nil,parent,selector and 'BackdropTemplate' or 'UIPanelButtonTemplate');b:SetSize(240,26)
+ b:SetNormalFontObject('GameFontNormal');b:SetHighlightFontObject('GameFontHighlight');b:SetDisabledFontObject('GameFontDisable')
+ if selector then
+  b:SetBackdrop({bgFile='Interface\\ChatFrame\\ChatFrameBackground',edgeFile='Interface\\Tooltips\\UI-Tooltip-Border',edgeSize=12,insets={left=3,right=3,top=3,bottom=3}})
+  b:SetBackdropColor(.055,.05,.04,.95);b:SetBackdropBorderColor(.6,.48,.28,1)
+ end
+ b:SetText(T(value))
+ b:SetScript('OnClick',function() if Allowed() then action() end end);return b
+end
+local function Tooltip(widget,title,help)
+ widget:SetScript('OnEnter',function(self)
+  if not GameTooltip or T(help)=='' then return end
+  GameTooltip:SetOwner(self,'ANCHOR_RIGHT');GameTooltip:SetText(T(title),1,.82,0)
+  GameTooltip:AddLine(T(help),1,1,1,true);GameTooltip:Show()
+ end)
+ widget:SetScript('OnLeave',function() if GameTooltip then GameTooltip:Hide() end end)
+end
+local function Edit(parent,multi)
+ local e=CreateFrame('EditBox',nil,parent,'InputBoxTemplate');e:SetSize(240,28)
+ e:SetAutoFocus(false);e:SetMultiLine(multi==true);e:SetMaxLetters(multi and 8192 or 48);e:SetFontObject('GameFontHighlight')
+ return e
+end
+local function ClearFocus(e) e:ClearFocus() end
+local function Enable(control,on)
+ if control.SetEnabled then control:SetEnabled(on) elseif on then control:Enable() else control:Disable() end
+ control:SetAlpha(on and 1 or .5)
+end
+local function DiscardEdits(h,unitsOnly)
+ for _,r in ipairs(h.rows) do if r.discard and (not unitsOnly or r.unitEdit) then r.discard() end end
+end
+local function ClearImport(h)
+ h.checkedText=nil;h.checkedProfile=nil;h.checkedRevision=nil;h.checkedDB=nil
+end
+local function SelectPage(h,key)
+ DiscardEdits(h)
+ ClosePopup(h);h.confirm:Hide();h.page=Page(key);HC.menuPage=h.page;h.message=nil
+ h.scroll:SetVerticalScroll(0);HC.UpdateOptions()
+end
+local function Confirm(h,text,action)
+ -- Drop pending text before disabling controls can trigger native focus loss.
+ DiscardEdits(h)
+ ClosePopup(h);h.confirm.active=HC.db.activeProfile;h.confirm.caption=text;h.confirm.action=action
+ h.confirm:Show();HC.UpdateOptions()
+end
+local function Dropdown(h,anchor,items,chosen,action)
+ if not Allowed() then return end
+ local p=h.popup
+ if not p then
+  p=CreateFrame('Frame',nil,UIParent,'BackdropTemplate');h.popup=p;p:SetFrameStrata('TOOLTIP');p:SetClampedToScreen(true);p:EnableMouse(true)
+  p:SetBackdrop({bgFile='Interface\\Buttons\\WHITE8X8',edgeFile='Interface\\Buttons\\WHITE8X8',edgeSize=1})
+  p:SetBackdropColor(.06,.07,.09,1);p:SetBackdropBorderColor(.6,.5,.3,1)
+  p.scroll=CreateFrame('ScrollFrame',nil,p,'UIPanelScrollFrameTemplate');p.scroll:SetPoint('TOPLEFT',8,-8);p.scroll:SetPoint('BOTTOMRIGHT',-28,8)
+  p.child=CreateFrame('Frame',nil,p.scroll);p.child:SetSize(300,30);p.scroll:SetScrollChild(p.child);p.buttons={}
+ end
+ p:ClearAllPoints();p:SetPoint('TOPLEFT',anchor,'BOTTOMLEFT',0,-2);p:SetSize(336,math.min(250,#items*30+16));p.child:SetHeight(#items*30);p.scroll:SetVerticalScroll(0)
+ for i,item in ipairs(items) do
+  local b=p.buttons[i]
+  if not b then b=Button(p.child,'',function() end,true);b:SetSize(296,28);b:SetPoint('TOPLEFT',0,-(i-1)*30);p.buttons[i]=b end
+  b:SetText((item[1]==chosen and '|cffffd080> |r' or '')..T(item[2]))
+  local value=item[1];b:SetScript('OnClick',function() p:Hide();if Allowed() then action(value) end end);b:Show()
+ end
+ for i=#items+1,#p.buttons do p.buttons[i]:Hide() end;p:Show()
+end
+local function Row(h,page,id,title,help,height)
+ page=Page(page)
+ local p=h.pages[page];local r=CreateFrame('Frame',nil,p)
+ r:SetPoint('TOPLEFT',0,-p.used);r:SetPoint('TOPRIGHT',0,-p.used);r:SetHeight(height or 34)
+ p.used=p.used+(height or 34);p:SetHeight(p.used)
+ r.title=Label(r,title,'GameFontNormal');r.title:SetPoint('TOPLEFT',0,-6);r.title:SetPoint('TOPRIGHT',-258,-6)
+ r.help=Label(r,help,'GameFontHighlightSmall');r.help:SetPoint('TOPLEFT',0,-40);r.help:SetPoint('TOPRIGHT',-8,-40)
+ r.help:Hide();r:EnableMouse(true);Tooltip(r,title,help)
+ r.titleText=title;r.helpText=help;r.widgets={};r.id=id;r.page=page;r.baseHeight=height or 34;h.rows[#h.rows+1]=r;h.controls[id]=r
+ return r
+end
+local function Get(h,key,unit) if unit then return HC.db.unitBars[h.unit][key] else return HC.db[key] end end
+local function Field(h,page,id,title,help,choices,key,unit)
+ local r=Row(h,page,id,title,help)
+ r.items=function() return type(choices)=='function' and choices() or choices end
+ r.get=function() return Get(h,key,unit) end
+ r.select=function(value) Result(h,HC.SetMenuValue(key,value,unit and h.unit)) end
+ r.button=Button(r,'',function() Dropdown(h,r.button,r.items(),r.get(),r.select) end,true);r.button:SetPoint('TOPRIGHT',-4,0);r.widgets={r.button}
+ r.refresh=function()
+  local caption='';for _,v in ipairs(r.items()) do if v[1]==r.get() then caption=T(v[2]);break end end;r.button:SetText(caption..'  >')
+ end
+ return r
+end
+local function Toggle(h,page,id,title,help,key,unit,enabled)
+ local r=Row(h,page,id,title,help);local b=CreateFrame('CheckButton',nil,r,'UICheckButtonTemplate')
+ b:SetSize(30,30);b:SetPoint('TOPRIGHT',-8,2);r.button=b;r.widgets={b};r.enabled=enabled;r.checkbox=true
+ r.title:SetPoint('TOPRIGHT',-48,-2)
+ b:SetScript('OnClick',function()
+  if Allowed() and (not enabled or enabled()) then Result(h,HC.SetMenuValue(key,not Get(h,key,unit),unit and h.unit)) else HC.UpdateOptions() end
+ end)
+ r.refresh=function() b:SetChecked(Get(h,key,unit)==true) end;return r
+end
+local function Number(h,page,id,title,help,key,lo,hi,step,factor,unit,enabled)
+ factor=factor or 1;local r=Row(h,page,id,title,help)
+ r.unitEdit=unit==true
+ local e=Edit(r);e:SetSize(78,26);e:SetPoint('TOPRIGHT',-12,0);r.edit=e
+ local function current() return Get(h,key,unit)*factor end
+ local function editContext()
+  return {db=HC.db,profile=HC.db.activeProfile,revision=HC.profileRevision or 0,unit=unit and h.unit}
+ end
+ local function sameContext(context)
+  return context and context.db==HC.db and context.profile==HC.db.activeProfile
+   and context.revision==(HC.profileRevision or 0) and context.unit==(unit and h.unit)
+ end
+ r.discard=function()
+  r.dirty=false;r.editContext=nil;e:ClearFocus()
+ end
+ r.commit=function(value,context)
+  if not Allowed() or h.confirm:IsShown() or (enabled and not enabled())
+   or (context and not sameContext(context)) then return false end
+  local n=tonumber(value)
+  if not n or n~=n or n<lo or n>hi then
+   e:SetText(string.format('%g',current()));Status(h,T(S('Zulässiger Bereich: ','Allowed range: '))..lo..'–'..hi);return false
+  end
+  n=math.max(lo,math.min(hi,math.floor((n-lo)/step+.5)*step+lo))
+  local ok,why=HC.SetMenuValue(key,n/factor,unit and h.unit);Result(h,ok,why);return ok
+ end
+ local function commit()
+  if r.dirty then
+   local context=r.editContext;r.dirty=false;r.editContext=nil
+   if sameContext(context) then r.commit(e:GetText(),context) end
+  end
+  HC.UpdateOptions()
+ end
+ e:SetScript('OnTextChanged',function(_,user)
+  if user and Allowed() and not h.confirm:IsShown() then
+   if not r.dirty then r.editContext=editContext() end;r.dirty=true
+  end
+ end)
+ e:SetScript('OnEnterPressed',function() commit();e:ClearFocus() end);e:SetScript('OnEditFocusLost',commit)
+ e:SetScript('OnEscapePressed',function() r.discard();e:SetText(string.format('%g',current())) end)
+ local slider=CreateFrame('Slider',nil,r,'OptionsSliderTemplate');r.slider=slider
+ slider:SetSize(134,18);slider:SetPoint('TOPRIGHT',-104,-4);slider:SetMinMaxValues(lo,hi);slider:SetValueStep(step);slider:SetObeyStepOnDrag(true)
+ if slider.Low then slider.Low:SetText('') end;if slider.High then slider.High:SetText('') end
+ slider:SetScript('OnValueChanged',function(_,value)
+  if not updating then r.discard();r.commit(value) end
+ end)
+ r.widgets={e,slider};r.enabled=enabled
+ r.refresh=function()
+  if r.dirty and not sameContext(r.editContext) then r.discard() end
+  if not r.dirty then e:SetText(string.format('%g',current())) end;slider:SetValue(current())
+ end
+ return r
+end
+local function Action(h,page,id,title,help,caption,action)
+ local r=Row(h,page,id,title,help);r.button=Button(r,caption,action);r.button:SetPoint('TOPRIGHT',-4,0);r.widgets={r.button}
+ r.refresh=function() r.button:SetText(T(caption)) end;return r
+end
+local function Note(h,page,id,title,text)
+ local r=Row(h,page,id,title,text,94);r.note=true;r.help:Show();r.title:SetPoint('TOPRIGHT',-4,-2);return r
+end
+local function Groups() local r={};for _,g in ipairs(HC.visualGroups) do r[#r+1]={g.key,g.title} end;return r end
+local function Elements(group)
+ local r={};for _,g in ipairs(HC.visualGroups) do if g.key==group then for _,k in ipairs(g.elements) do r[#r+1]={k,HC.elements[k].title} end end end;return r
+end
+local function Build(h)
+ local active=function() return T(S('Aktives Profil: ','Active profile: '))..HC.db.activeProfile end
+ Toggle(h,'overview','hideBlizzard',S('Blizzard-Spielerleiste ersetzen','Replace Blizzard player bar'),S('Bei passenden Hanse-Cast-Zaubern ausblenden. Bei fehlenden Daten/Grafiken bleibt die Standardanzeige verfügbar. Ziel-/Fokusframes bleiben erhalten.','Hide during valid Hanse Cast spells. Missing data/artwork keeps the default display available. Target/focus frames remain.'),'hideBlizzard')
 
--- Advanced controls live on separate pages so the everyday appearance panel
--- remains small. Text imports are staged and applied by a separate action.
-function HC.OpenAdvancedOptions()
- if InCombatLockdown() then return end
- if HC.advanced then HC.advanced:Show();HC.UpdateAdvancedOptions();return end
- local p=CreateFrame('Frame','HanseCastAdvanced',UIParent,'BackdropTemplate');HC.advanced=p
- p:SetSize(480,590);p:SetPoint('CENTER');p:SetClampedToScreen(true);p:SetFrameStrata('DIALOG');p:EnableMouse(true)
- p:SetBackdrop({bgFile=texture,edgeFile=texture,edgeSize=1});p:SetBackdropColor(.045,.055,.07,1);p:SetBackdropBorderColor(.62,.47,.27,1)
- local close=CreateFrame('Button',nil,p,'UIPanelCloseButton');close:SetPoint('TOPRIGHT')
- p.pages={};p.dynamic={};p.tab='comfort';p.unit='target'
- local function Label(parent,key,x,y)
-  local t=parent:CreateFontString(nil,'OVERLAY','GameFontHighlightSmall');t:SetPoint('TOPLEFT',x,y);HC.Localize(t,key);return t
+ Field(h,'appearance','family',S('Kategorie','Category'),S('Grafischer Aufbau und Effekte. Zauberzeit und Spielmechanik bleiben gleich.','Visual structure and effects. Spell duration and mechanics remain unchanged.'),families,'family')
+ local g=Field(h,'appearance','group',S('Themengruppe','Theme group'),S('Alle Klassenoptiken sind frei wählbar. Fraktionsoptiken wählen auch das passende Wappen.','All class styles are available. Faction styles also select the matching emblem.'),Groups,'element')
+ g.get=function() return HC.GetVisualGroup(HC.db.element).key end
+ g.select=function(v) local list=Elements(v);if list[1] then Result(h,HC.SetMenuValue('element',list[1][1])) end end
+ Field(h,'appearance','element',S('Manuelle Optik','Manual appearance'),S('Gilt auch für unbekannte Zauber und Vorschauen.','Also used for unknown spells and previews.'),function() return Elements(HC.GetVisualGroup(HC.db.element).key) end,'element')
+ Toggle(h,'appearance','autoSpellVisual',S('Automatische Zauberoptik','Automatic spell appearance'),function()
+  return T(HC.elements[HC.db.element].faction and S('Fraktionsoptik bleibt fest. Die Automatikpräferenz bleibt gespeichert.','Faction appearance stays fixed. Your automatic preference is preserved.') or S('Bekannte, zugängliche Zauber erhalten eine passende Optik. Sonst gilt die manuelle Auswahl.','Known accessible spells use a matching appearance. Otherwise the manual choice is used.'))
+ end,'autoSpellVisual',nil,function() return not HC.elements[HC.db.element].faction end)
+ Field(h,'appearance','identity',S('Akzentfarbe','Accent colour'),S('Klassenfarbe beeinflusst Nebenakzente, nicht die Hauptfarbe.','Class colour affects secondary accents, not the main colour.'),{{'neutral',S('Neutral','Neutral')},{'class',S('Eigene Klassenfarbe','Your class colour')}},'identity')
+ Field(h,'appearance','faction',S('Fraktionswappen','Faction emblem'),S('Wappen neben der Spielerleiste. Ändert nicht deine Charakterfraktion.','Emblem beside the player bar. Does not change your character faction.'),{{'none','Aus'},{'alliance','Allianz'},{'horde','Horde'}},'faction')
+ Action(h,'appearance','preview',S('Auswahl ausprobieren','Try this appearance'),S('Künstliche Vorschau im Spiel; keine echte Zaubermessung.','Artificial preview in game; not a real spell measurement.'),S('Vorschau starten','Start preview'),function() HC.StartMenuPreview(h,'player') end)
+
+ local sizeHelp=S('UI-Einheiten; die Bildschirmgröße hängt auch von der WoW-Skalierung ab.','UI units; screen size also depends on WoW UI scale.')
+ Number(h,'layout','width','Breite',sizeHelp,'width',180,600,20)
+ Number(h,'layout','height','Höhe',S('Mindestens 24 skalierte UI-Einheiten. Kleine Skalierung kann die Grundhöhe automatisch erhöhen.','At least 24 scaled UI units. A small scale may automatically increase the base height.'),'height',24,60,2)
+ Number(h,'layout','scale','Skalierung',S('Gesamtgröße in Prozent.','Overall size in percent.'),'scale',60,200,10,100)
+ Number(h,'layout','x','Position X',S('Vom Bildschirmzentrum: negativ links, positiv rechts. Auf den sichtbaren Bereich begrenzt.','From screen centre: negative left, positive right. Limited to the visible area.'),'x',-10000,10000,1)
+ Number(h,'layout','y','Position Y',S('Vom Bildschirmzentrum: negativ unten, positiv oben.','From screen centre: negative down, positive up.'),'y',-10000,10000,1)
+ Action(h,'layout','move',S('Verschieben','Move'),S('Linke Maustaste zum Ziehen. Fertig sperrt die Leiste wieder.','Drag with the left mouse button. Done locks the bar again.'),S('Im Spiel positionieren','Position in game'),function() HC.StartMenuPreview(h,'player') end)
+ Action(h,'layout','resetPosition',S('Nur Position zurücksetzen','Reset position only'),S('Gestaltung und andere Profile bleiben erhalten.','Appearance and other profiles are preserved.'),S('Spielerposition zurücksetzen','Reset player position'),function() HC.SetMenuValue('x',0);HC.SetMenuValue('y',-180) end)
+
+ Field(h,'comfort','font','Schrift','',{{'default','Standard'},{'modern','Modern'}},'font')
+ Number(h,'comfort','fontSize','Schriftgröße',S('Größe der Zauberbeschriftung.','Size of the spell labels.'),'fontSize',10,20,1)
+ Field(h,'comfort','timeFormat',S('Zeitanzeige','Time display'),'',{{'remaining','Restzeit'},{'elapsed','Verstrichen'},{'both','Beides'},{'hidden','Aus'}},'timeFormat')
+ Number(h,'comfort','opacity','Deckkraft',S('Sichtbarkeit der Spielerleiste in Prozent.','Player bar visibility in percent.'),'opacity',20,100,10,100)
+ Field(h,'comfort','iconPosition','Zaubersymbol','',{{'hidden','Aus'},{'left','Links'},{'right','Rechts'}},'iconPosition')
+ Toggle(h,'comfort','gcd',S('Globale Abklingzeit (GCD)','Global cooldown (GCD)'),S('Die kurze gemeinsame Abklingzeit vieler Fähigkeiten als schmale Linie.','The brief shared cooldown of many abilities as a thin line.'),'gcd')
+ Toggle(h,'comfort','finishCue',S('Lichtimpuls beim Abschluss','Completion light pulse'),S('Kurzer zusätzlicher Lichtimpuls nach erfolgreichem Abschluss.','Brief extra light pulse after successful completion.'),'finishCue')
+ Toggle(h,'comfort','latency','Latenzmarkierung',S('Orientierung anhand der Weltlatenz; kein exaktes Eingabe- oder Zauberwarteschlangenfenster.','Guidance based on world latency; not an exact input or spell queue window.'),'latency')
+ Toggle(h,'comfort','channelTicks',S('Manuelle Kanal-Hilfslinien','Manual channel guides'),S('Gleichmäßige Unterteilung, keine erkannten Schadens- oder Heilticks.','Equal segments, not detected damage or healing ticks.'),'channelTicks')
+ Number(h,'comfort','channelTickCount','Anzahl Abschnitte',S('Nur bei eingeschalteten Kanal-Hilfslinien verfügbar.','Available when channel guides are enabled.'),'channelTickCount',2,10,1,1,nil,function() return HC.db.channelTicks end)
+
+ local u=Field(h,'units','unit',S('Bearbeitete Leiste','Editing bar'),S('Ziel und Fokus haben eigene Einstellungen.','Target and focus have independent settings.'),{{'target','Ziel'},{'focus','Fokus'}},'element')
+ u.get=function() return h.unit end;u.select=function(v)
+  if v~='target' and v~='focus' then return end
+  DiscardEdits(h,true);h.unit=v;HC.UpdateOptions()
  end
- local function Button(parent,key,x,y,width,action)
-  local b=CreateFrame('Button',nil,parent,'UIPanelButtonTemplate');b:SetSize(width,26);b:SetPoint('TOPLEFT',x,y);HC.Localize(b,key)
-  b:SetScript('OnClick',function() if InCombatLockdown() then return end;action();HC.UpdateAdvancedOptions() end);return b
+ Toggle(h,'units','unitEnabled',S('Eigene Leiste aktivieren','Enable custom bar'),S('Blizzards Ziel- und Fokusframes bleiben unverändert.','Blizzard target and focus frames remain unchanged.'),'enabled',true)
+ Field(h,'units','visibility',S('Anzeigen bei','Show during'),S('Nur zugängliche Zauber; keine dauerhaft leere Leiste.','Only accessible spells; not a permanently empty bar.'),{{'always',S('Innerhalb & außerhalb des Kampfes','In and out of combat')},{'combat','Im Kampf'}},'visibility',true)
+ Toggle(h,'units','showIcon','Zaubersymbol','','showIcon',true)
+ Field(h,'units','unitFamily',S('Kategorie','Category'),function() return T(S('Spieler-Auswahl: ','Player selection: '))..T((function() for _,v in ipairs(families) do if v[1]==HC.db.family then return v[2] end end end)()) end,function()
+  local r={{'inherit',S('Von Spielerleiste übernehmen','Inherit player bar')}};for _,v in ipairs(families) do r[#r+1]=v end;return r
+ end,'family',true)
+ Field(h,'units','unitElement',S('Optik','Appearance'),function() return T(S('Spieler-Auswahl: ','Player selection: '))..T(HC.elements[HC.db.element].title) end,function()
+  local r={{'inherit',S('Von Spielerleiste übernehmen','Inherit player bar')}}
+  for _,g in ipairs(HC.visualGroups) do for _,key in ipairs(g.elements) do r[#r+1]={key,T(g.title)..' · '..T(HC.elements[key].title)} end end;return r
+ end,'element',true)
+ for _,v in ipairs({{'width','Breite',180,600,20,1},{'height','Höhe',24,60,2,1},{'scale','Skalierung',60,200,10,100},{'x','Position X',-10000,10000,1,1},{'y','Position Y',-10000,10000,1,1}}) do
+  Number(h,'units','unit'..v[1],v[2],sizeHelp,v[1],v[3],v[4],v[5],v[6],true)
  end
- Label(p,'Erweitert / Profile',22,-20)
- for i,entry in ipairs({{'comfort','Komfort'},{'profiles','Profile'},{'units','Ziel / Fokus'}}) do
-  local key=entry[1];local page=CreateFrame('Frame',nil,p);page:SetAllPoints();page:Hide();p.pages[key]=page
-  Button(p,entry[2],22+(i-1)*146,-48,140,function() p.tab=key end)
- end
- local function Dynamic(button,fn) p.dynamic[#p.dynamic+1]={button,fn} end
- local function RefreshPlayer() HC.ApplyLayout();if HC.Refresh then HC.Refresh() end end
- local function Cycle(page,label,key,choices,y)
-  Label(page,label,22,y-6)
-  local b=Button(page,'',222,y,234,function()
-   local index=1;for i,c in ipairs(choices) do if c[1]==HC.db[key] then index=i end end
-   HC.db[key]=choices[index%#choices+1][1];RefreshPlayer()
-   if key=='language' then HC.RefreshLocale() end
+ Action(h,'units','unitPreview',S('Vorschau & Position','Preview & position'),S('Nur die ausgewählte Leiste; keine dauerhafte Aktivierung abgeschalteter Leisten.','Only the selected bar; does not permanently enable a disabled bar.'),S('Diese Leiste positionieren','Position this bar'),function() HC.StartMenuPreview(h,h.unit) end)
+
+ local p=Field(h,'profiles','profileSelect',S('Profil auswählen','Select profile'),S('Auswahl allein aktiviert nichts. Maximal zwölf Profile.','Selecting does not activate a profile. Up to twelve profiles.'),function()
+  local r={};for _,n in ipairs(HC.ProfileNames()) do r[#r+1]={n,n..(n==HC.db.activeProfile and T(S(' · Aktiv',' · Active')) or '')} end;return r
+ end,'element')
+ p.get=function() return h.selectedProfile end;p.select=function(v) h.selectedProfile=v;HC.UpdateOptions() end
+ Action(h,'profiles','activate',S('Ausgewähltes Profil','Selected profile'),function() return h.selectedProfile end,S('Aktivieren','Activate'),function() Result(h,HC.SwitchProfile(h.selectedProfile)) end)
+ local name=Row(h,'profiles','name',S('Name für neues Profil','Name for new profile'),S('Für Erstellen, Kopieren oder Import als neues Profil.','For creating, copying or importing as a new profile.'))
+ h.profileName=Edit(name);h.profileName:SetPoint('TOPRIGHT',-4,0);name.widgets={h.profileName};h.profileName:SetScript('OnEscapePressed',ClearFocus)
+ Action(h,'profiles','new',S('Mit Standardwerten starten','Start with defaults'),S('Erstellt und aktiviert ein neues Profil. Bestehende Profile bleiben erhalten.','Creates and activates a new profile. Existing profiles are preserved.'),S('Neues Profil','New profile'),function() Result(h,HC.CreateProfile(h.profileName:GetText(),false));h.selectedProfile=HC.db.activeProfile;HC.UpdateOptions() end)
+ Action(h,'profiles','copy',S('Aktives Profil kopieren','Copy active profile'),active,S('Kopie erstellen','Create copy'),function() Result(h,HC.CreateProfile(h.profileName:GetText(),true));h.selectedProfile=HC.db.activeProfile;HC.UpdateOptions() end)
+ Action(h,'profiles','delete',S('Ausgewähltes Profil löschen','Delete selected profile'),function() return h.selectedProfile end,S('Löschen …','Delete …'),function()
+  local name=h.selectedProfile;Confirm(h,function() return T(S('Profil endgültig löschen: ','Permanently delete profile: '))..name end,function() Result(h,HC.DeleteProfile(name));h.selectedProfile=HC.db.activeProfile end)
+ end)
+ Action(h,'profiles','reset',S('Zurücksetzen & aktivieren','Reset & activate'),function() return h.selectedProfile end,S('Zurücksetzen …','Reset …'),function()
+  local name=h.selectedProfile;Confirm(h,function() return T(S('Auf Standardwerte zurücksetzen und aktivieren: ','Reset to defaults and activate: '))..name end,function()
+   local ok,why=HC.SwitchProfile(name);if ok then ok,why=HC.ResetProfile() end;Result(h,ok,why)
   end)
-  Dynamic(b,function() for _,c in ipairs(choices) do if c[1]==HC.db[key] then return L(c[2]) end end;return '' end)
+ end)
+ Action(h,'profiles','export',S('Aktives Profil exportieren','Export active profile'),active,S('Exportieren','Export'),function()
+  h.importText:SetText(HC.ExportProfile());HC.pendingProfileImport=nil;ClearImport(h);h.importText:HighlightText()
+  Status(h,S('Profiltext unten markieren und mit Strg+C kopieren.','Select the profile text below and copy with Ctrl+C.'))
+ end)
+ local input=Row(h,'profiles','importText',S('Profiltext','Profile text'),S('Strg+V zum Einfügen. Import wird geprüft; es wird kein Code ausgeführt.','Ctrl+V to paste. Import is validated; no code is executed.'),245);input.title:SetPoint('TOPRIGHT',-4,-2)
+ local sc=CreateFrame('ScrollFrame',nil,input,'UIPanelScrollFrameTemplate');sc:SetPoint('TOPLEFT',8,-80);sc:SetPoint('BOTTOMRIGHT',-28,12)
+ h.importText=Edit(sc,true);h.importText:SetSize(440,150);sc:SetScrollChild(h.importText)
+ h.importText:SetScript('OnTextChanged',function() HC.pendingProfileImport=nil;ClearImport(h);if not updating then HC.UpdateOptions() end end)
+ h.importText:SetScript('OnEscapePressed',ClearFocus);input.widgets={h.importText}
+ Action(h,'profiles','checkImport',S('1. Import prüfen','1. Check import'),S('Prüft nur. Deine Einstellungen bleiben unverändert.','Checks only. Your settings stay unchanged.'),S('Prüfen','Check'),function()
+  local text=h.importText:GetText();local ok,why=HC.StageProfileImport(text);ClearImport(h)
+  if ok then
+   h.checkedText=text;h.checkedProfile=HC.db.activeProfile;h.checkedRevision=HC.profileRevision or 0;h.checkedDB=HC.db
+  end
+  if ok then Status(h,S('Import gültig. Ziel wählen und bewusst anwenden.','Import valid. Choose a destination and apply explicitly.')) else Result(h,false,why) end
+ end)
+ local function validImport()
+  return h.checkedText~=nil and h.checkedText==h.importText:GetText() and h.checkedDB==HC.db
+   and h.checkedProfile==HC.db.activeProfile and h.checkedRevision==(HC.profileRevision or 0)
  end
- local function Number(page,label,key,low,high,step,y)
-  Label(page,label,22,y-5);local value=Label(page,'',250,y-5)
-  Dynamic(value,function() return string.format('%.2g',HC.db[key]) end)
-  Button(page,'−',364,y,42,function() HC.db[key]=math.max(low,HC.db[key]-step);RefreshPlayer() end)
-  Button(page,'+',414,y,42,function() HC.db[key]=math.min(high,HC.db[key]+step);RefreshPlayer() end)
- end
- local c=p.pages.comfort
- Cycle(c,'Sprache','language',{{'auto','Automatisch'},{'deDE','Deutsch'},{'enUS','English'}},-92)
- Cycle(c,'Schrift','font',{{'default','Standard'},{'modern','Modern'}},-128)
- Number(c,'Schriftgröße','fontSize',10,20,1,-164)
- Cycle(c,'Zeit','timeFormat',{{'remaining','Restzeit'},{'elapsed','Verstrichen'},{'both','Beides'},{'hidden','Versteckt'}},-200)
- Number(c,'Deckkraft','opacity',.2,1,.1,-236)
- Cycle(c,'Zaubersymbol','iconPosition',{{'hidden','Versteckt'},{'left','Links'},{'right','Rechts'}},-272)
- Cycle(c,'Latenzmarkierung','latency',{{false,'Aus'},{true,'Ein'}},-308)
- Cycle(c,'Kanal-Hilfslinien (manuell)','channelTicks',{{false,'Aus'},{true,'Ein'}},-344)
- Number(c,'Anzahl Abschnitte','channelTickCount',2,10,1,-380)
- local note=Label(c,'Gleichmäßige Hilfslinien, keine gemessenen Zauberticks. Latenz nutzt nur lesbare Weltlatenz.',22,-432)
- note:SetWidth(430);note:SetWordWrap(true)
- local profiles=p.pages.profiles
- local function Edit(parent,x,y,w,h,multi)
-  local e=CreateFrame('EditBox',nil,parent,'InputBoxTemplate');e:SetSize(w,h);e:SetPoint('TOPLEFT',x,y)
-  if e.SetAutoFocus then e:SetAutoFocus(false) end
-  if e.SetMultiLine then e:SetMultiLine(multi==true) end
-  if e.SetMaxLetters then e:SetMaxLetters(multi and 8192 or 48) end
-  if e.SetFontObject then e:SetFontObject('GameFontHighlightSmall') end
-  e:SetScript('OnEscapePressed',function(self) if self.ClearFocus then self:ClearFocus() end end)
-  return e
- end
- p.selectedProfile=HC.db.activeProfile
- p.profileSelect=Button(profiles,'',22,-92,434,function()
-  local names=HC.ProfileNames();local index=1;for i,n in ipairs(names) do if n==p.selectedProfile then index=i end end
-  p.selectedProfile=names[index%#names+1];p.confirm=nil
- end)
- Dynamic(p.profileSelect,function() return (p.selectedProfile or HC.db.activeProfile)..(p.selectedProfile==HC.db.activeProfile and ' *' or '') end)
- local function Status(ok) p.status:SetText(L(ok and 'Erledigt.' or 'Nicht möglich: Name, Profilgrenze oder Kampf prüfen.')) end
- Button(profiles,'Wechseln',22,-126,140,function() Status(HC.SwitchProfile(p.selectedProfile)) end)
- p.deleteButton=Button(profiles,'Löschen',168,-126,140,function()
-  if p.confirm=='delete' then Status(HC.DeleteProfile(p.selectedProfile));p.selectedProfile=HC.db.activeProfile;p.confirm=nil else p.confirm='delete' end
- end)
- Dynamic(p.deleteButton,function() return L(p.confirm=='delete' and 'Löschen bestätigen' or 'Löschen') end)
- p.resetButton=Button(profiles,'Zurücksetzen',314,-126,142,function()
-  if p.confirm=='reset' then
-   if HC.SwitchProfile(p.selectedProfile) then Status(HC.ResetProfile()) else Status(false) end
-   p.confirm=nil
-  else p.confirm='reset' end
- end)
- Dynamic(p.resetButton,function() return L(p.confirm=='reset' and 'Reset bestätigen' or 'Zurücksetzen') end)
- Label(profiles,'Profilname',22,-171);p.profileName=Edit(profiles,145,-164,310,26,false)
- Button(profiles,'Neues Profil',22,-202,212,function() Status(HC.CreateProfile(p.profileName:GetText(),false));p.selectedProfile=HC.db.activeProfile end)
- Button(profiles,'Kopie erstellen',244,-202,212,function() Status(HC.CreateProfile(p.profileName:GetText(),true));p.selectedProfile=HC.db.activeProfile end)
- Label(profiles,'Import / Export (Text)',22,-243)
- local scroll=CreateFrame('ScrollFrame',nil,profiles,'UIPanelScrollFrameTemplate');scroll:SetSize(408,166);scroll:SetPoint('TOPLEFT',22,-266)
- p.importText=Edit(scroll,0,0,400,166,true);if scroll.SetScrollChild then scroll:SetScrollChild(p.importText) end
- p.importText:SetScript('OnTextChanged',function() HC.pendingProfileImport=nil end)
- Button(profiles,'Exportieren',22,-450,140,function() p.importText:SetText(HC.ExportProfile());if p.importText.HighlightText then p.importText:HighlightText() end end)
- Button(profiles,'Import prüfen',168,-450,140,function()
-  local ok=HC.StageProfileImport(p.importText:GetText());p.status:SetText(L(ok and 'Import geprüft. Mit Anwenden bestätigen.' or 'Ungültiges Profil. Keine Änderung.'))
- end)
- Button(profiles,'Import anwenden',314,-450,142,function() Status(HC.ApplyProfileImport()) end)
- p.status=Label(profiles,'',22,-493);p.status:SetWidth(430);p.status:SetWordWrap(true)
- local units=p.pages.units
- Button(units,'Ziel',22,-92,212,function() p.unit='target' end);Button(units,'Fokus',244,-92,212,function() p.unit='focus' end)
- local function UnitCycle(label,key,choices,y)
-  Label(units,label,22,y-6)
-  local b=Button(units,'',222,y,234,function()
-   local current=HC.db.unitBars[p.unit][key];local index=1;for i,v in ipairs(choices) do if v[1]==current then index=i end end
-   HC.ConfigureUnitBar(p.unit,{[key]=choices[index%#choices+1][1]})
+ local nr=Action(h,'profiles','importNew',S('2. Als neues Profil importieren','2. Import as a new profile'),S('Verwendet den oben eingegebenen Namen. Bestehende Profile bleiben erhalten.','Uses the name above. Existing profiles are preserved.'),S('Neu importieren','Import as new'),function()
+  if validImport() then Result(h,HC.ImportAsNewProfile(h.profileName:GetText(),h.checkedText));h.selectedProfile=HC.db.activeProfile;HC.UpdateOptions() end
+ end);nr.enabled=validImport
+ local ow=Action(h,'profiles','overwrite',S('Alternativ: aktives Profil ersetzen','Alternatively: replace active profile'),active,S('Überschreiben …','Overwrite …'),function()
+  if not validImport() then return end
+  local name=HC.db.activeProfile;local text=h.checkedText
+  Confirm(h,function() return T(S('Aktives Profil mit Import ersetzen: ','Replace active profile with import: '))..name end,function()
+   if HC.db.activeProfile==name and h.checkedText==text and validImport() then Result(h,HC.ApplyProfileImport(text)) end
   end)
-  Dynamic(b,function() local current=HC.db.unitBars and HC.db.unitBars[p.unit][key];for _,v in ipairs(choices) do if v[1]==current then return (v[3] and L(v[3])..' · ' or '')..L(v[2]) end end;return '' end)
- end
- UnitCycle('Aktiv','enabled',{{false,'Aus'},{true,'Ein'}},-128)
- UnitCycle('Sichtbarkeit','visibility',{{'always','Immer'},{'combat','Im Kampf'}},-162)
- UnitCycle('Symbol','showIcon',{{false,'Aus'},{true,'Ein'}},-196)
- local fs={{'inherit','Übernehmen'}};for _,v in ipairs(families) do fs[#fs+1]=v end
- UnitCycle('Material: ','family',fs,-230)
- local es={{'inherit','Übernehmen'}};for _,group in ipairs(HC.visualGroups) do for _,key in ipairs(group.elements) do es[#es+1]={key,HC.elements[key].title,group.title} end end
- UnitCycle('Zauberoptik: ','element',es,-264)
- for i,row in ipairs({{'Breite','width',180,600,20},{'Höhe','height',24,60,2},{'Skalierung','scale',.6,2,.1},{'Position X','x',-10000,10000,10},{'Position Y','y',-10000,10000,10}}) do
-  local y=-298-(i-1)*34;local key=row[2];Label(units,row[1],22,y-5);local val=Label(units,'',250,y-5)
-  Dynamic(val,function() return tostring(HC.db.unitBars and HC.db.unitBars[p.unit][key] or '') end)
-  for j,sign in ipairs({-1,1}) do Button(units,sign<0 and '−' or '+',364+(j-1)*50,y,42,function()
-   HC.ConfigureUnitBar(p.unit,{[key]=math.max(row[3],math.min(row[4],HC.db.unitBars[p.unit][key]+sign*row[5]))})
-  end) end
- end
- Button(units,'Vorschau Ziel / Fokus',22,-484,434,function() HC.PreviewUnitBars(not HC.unitBarsPreview) end)
- p:SetScript('OnHide',function() HC.pendingProfileImport=nil;p.unitPreview=false;if HC.PreviewUnitBars then HC.PreviewUnitBars(false) end end)
- if HC.options then HC.options:Hide() end
- HC.UpdateAdvancedOptions();p:Show()
-end
-function HC.UpdateAdvancedOptions()
- local p=HC.advanced;if not p then return end
- for key,page in pairs(p.pages) do page:SetShown(p.tab==key) end
- for _,item in ipairs(p.dynamic) do item[1]:SetText(item[2]()) end
+ end);ow.enabled=validImport
+
+ Field(h,'help','language','Sprache',S('Im Profil gespeichert. Automatisch folgt der Spielsprache.','Saved in the profile. Automatic follows the game language.'),{{'auto','Automatisch'},{'deDE','Deutsch'},{'enUS','English'}},'language')
+ Note(h,'help','guide',S('In vier Schritten starten','Get started in four steps'),S('1. Gestaltung wählen. 2. Größe und Position anpassen. 3. Vorschau beenden. 4. Echten Zauber wirken und Darstellung prüfen.','1. Choose an appearance. 2. Adjust size and position. 3. End preview. 4. Cast a real spell to check the result.'))
+ Note(h,'help','limits',S('Grenzen der Anzeige','Display limitations'),S('Geschützte oder fehlende Daten können die eigene Leiste ausblenden. Keine Empower-Zauber. Kanal-Hilfslinien sind manuell.','Restricted or missing data can hide the custom bar. No empower spells. Channel guides are manual.'))
+ Action(h,'help','demo',S('Ereignis-Demo','Event demo'),S('Künstliche Beispiele für Zeitänderung, Abbruch und Unterbrechung.','Artificial examples of timing changes, cancellation and interruption.'),S('Demo starten','Start demo'),function() HC.StartMenuPreview(h,'player','feedback') end)
+ Action(h,'help','diagnose',S('Diagnoseinformationen','Diagnostic information'),S('Version und Status im Chat; es werden keine privaten Chatnachrichten gesammelt.','Version and status in chat; does not collect private messages.'),S('Status im Chat anzeigen','Show status in chat'),function() if SlashCmdList.HANSECAST then SlashCmdList.HANSECAST('status') end end)
+ Note(h,'help','support',S('Fehler melden','Report an issue'),function() return 'Hanse Cast '..HC.version..'\n'..T(S('Nenne WoW-Version und Schritte zum Nachstellen. /hansecast öffnet dieses Menü.','Include the WoW version and reproduction steps. /hansecast opens this menu.')) end)
 end
 
--- Native Settings entry opens the same panel; repeated clicks never toggle it off.
-function HC.OpenOptions()
-    if InCombatLockdown() then HC.Print(L("Einstellungen bitte außerhalb des Kampfes öffnen."));return end
-    if HC.options and HC.options:IsShown() then HC.UpdateOptions();return end
-    HC.ToggleOptions()
+-- Independent effect instance: no reparenting of live bars, no synthetic cast
+-- events, no database writes and no changes to the player's selected theme.
+local function MenuPreview(h)
+ local p=CreateFrame('Frame',nil,h);h.previewPanel=p
+ p:SetPoint('BOTTOMLEFT',16,42);p:SetPoint('BOTTOMRIGHT',-32,42);p:SetHeight(88)
+ p.caption=Label(p,S('Vorschau · Originalgrafik · Beispielzauber','Preview · original artwork · sample cast'),'GameFontHighlightSmall')
+ p.caption:SetPoint('TOPLEFT',0,0)
+ p.bar=CreateFrame('Frame',nil,p);p.bar:SetPoint('BOTTOMLEFT',8,14)
+ p.effects=HC.CreateEffects(p.bar,true)
+ p.name=Label(p.bar,'','GameFontHighlightSmall');p.name:SetPoint('BOTTOMLEFT',p.bar,'TOPLEFT',0,4)
+ p.time=Label(p.bar,'','GameFontHighlightSmall');p.time:SetPoint('BOTTOMRIGHT',p.bar,'TOPRIGHT',0,4)
+ p.gcd=p.bar:CreateTexture(nil,'BACKGROUND');p.gcd:SetPoint('TOPLEFT',p.bar,'BOTTOMLEFT',0,-5);p.gcd:SetColorTexture(.5,.5,.5,.6)
+ p.place=Button(p,S('Positionieren','Position'),function() HC.StartMenuPreview(h,'player') end)
+ p.place:SetSize(138,24);p.place:SetPoint('BOTTOMRIGHT',0,4)
+ p.paint=function()
+  local db=HC.db;local palette=HC.elements[db.element]
+  local key=db.family..':'..db.element..':'..db.identity
+  if p.key~=key then
+   p.key=key;p.theme={family=db.family,element=db.element,cast=palette.color,bright=palette.bright,
+    secondary=palette.secondary,secondaryBright=palette.secondaryBright,ghost=palette.ghost,classMaterial=palette.classMaterial,
+    accentTint=HC.GetIdentityTint(db.identity)}
+  end
+  local width=math.max(180,math.min(db.width,600));local height=db.height
+  local scale=math.min(db.scale,math.max(.3,(h.content:GetWidth()-170)/width),36/height)
+  local layout=width..':'..height..':'..scale
+  if p.layout~=layout then
+   p.layout=layout;p.bar:SetSize(width,height);p.bar:SetScale(scale);HC.LayoutEffects(width,height,p.effects)
+   p.name:SetWidth(math.max(60,width-80));p.name:SetWordWrap(false)
+  end
+  local now=GetTime();local progress=(now%3)/3
+  HC.DrawEffects(progress,now,p.effects,p.theme)
+  local available=HC.IsMaterialAvailable(p.effects)
+  p.name:SetText(available and T(HC.elements[db.element].title) or T(S('Grafik nicht verfügbar','Artwork unavailable')))
+  p.time:SetText(available and string.format('%.1f s',3*(1-progress)) or '')
+  p.bar:SetAlpha(db.opacity or 1);p.gcd:SetSize(width*(1-progress),2);p.gcd:SetShown(db.gcd and available)
+ end
+ p.tick=function(_,elapsed)
+  p.elapsed=(p.elapsed or 0)+elapsed
+  if p.elapsed<1/30 then return end;p.elapsed=0;p.paint()
+ end
+ p:SetScript('OnHide',function() p:SetScript('OnUpdate',nil);HC.HideEffects(p.effects) end)
+ p:Hide()
 end
 
+function HC.CreateMenuCanvas(parent,native)
+ local h=CreateFrame('Frame',native and 'HanseCastSettingsCanvas' or 'HanseCastOptions',parent,native and nil or 'BackdropTemplate')
+ h.native=native;h.page=Page(HC.menuPage or 'player');h.unit='target';h.rows={};h.controls={};h.pages={};h.nav={}
+ h.selectedProfile=HC.db.activeProfile;hosts[#hosts+1]=h
+ h.title=Label(h,'Hanse Cast','GameFontNormalLarge');h.title:SetPoint('TOPLEFT',16,-14)
+ h.active=Label(h,'','GameFontHighlightSmall');h.active:SetPoint('TOPLEFT',16,-42);h.active:SetPoint('TOPRIGHT',-30,-42)
+ h.profileButton=Button(h,'',function()
+  local items={};for _,name in ipairs(HC.ProfileNames()) do items[#items+1]={name,name} end
+  Dropdown(h,h.profileButton,items,HC.db.activeProfile,function(name) Result(h,HC.SwitchProfile(name)) end)
+ end,true);h.profileButton:SetSize(210,26);h.profileButton:SetPoint('TOPRIGHT',-32,-12)
+ h.status=Label(h,'','GameFontHighlightSmall');h.status:SetPoint('BOTTOMLEFT',16,12);h.status:SetPoint('BOTTOMRIGHT',-16,12);h.status:SetHeight(32)
+ h.scroll=CreateFrame('ScrollFrame',nil,h,'UIPanelScrollFrameTemplate');h.scroll:SetPoint('TOPLEFT',16,-98);h.scroll:SetPoint('BOTTOMRIGHT',-32,140)
+ h.content=CreateFrame('Frame',nil,h.scroll);h.content:SetSize(500,600);h.scroll:SetScrollChild(h.content)
+ for i,p in ipairs(pageNames) do
+  local key=p[1];local b=Button(h,p[2],function() SelectPage(h,key) end,true);b:SetSize(140,28);b:SetPoint('TOPLEFT',16+(i-1)*146,-62);h.nav[key]={button=b,text=p[2]}
+  local page=CreateFrame('Frame',nil,h.content);page:SetPoint('TOPLEFT');page:SetPoint('TOPRIGHT');page:SetHeight(10);page.used=0;h.pages[key]=page
+ end
+ local d=CreateFrame('Frame',nil,h,'BackdropTemplate');h.confirm=d;d:Hide();d:SetFrameStrata('DIALOG');d:SetFrameLevel(h:GetFrameLevel()+30);d:SetSize(460,190);d:SetPoint('CENTER');d:EnableMouse(true)
+ d:SetBackdrop({bgFile='Interface\\Buttons\\WHITE8X8',edgeFile='Interface\\Buttons\\WHITE8X8',edgeSize=1});d:SetBackdropColor(.06,.07,.09,1);d:SetBackdropBorderColor(.8,.6,.3,1)
+ d.text=Label(d,'');d.text:SetPoint('TOPLEFT',20,-20);d.text:SetPoint('TOPRIGHT',-20,-20)
+ d.accept=Button(d,'',function() local action=d.action;local active=d.active;d:Hide();if action and active==HC.db.activeProfile then action() end;HC.UpdateOptions() end)
+ d.accept:SetSize(190,30);d.accept:SetPoint('BOTTOMRIGHT',-20,18)
+ d.cancel=Button(d,'',function() d:Hide();HC.UpdateOptions() end);d.cancel:SetSize(190,30);d.cancel:SetPoint('BOTTOMLEFT',20,18)
+ Build(h)
+ local more=Action(h,'player','more',S('Weitere Einstellungen','More settings'),S('Schrift, Symbole, Akzente und genaue Position.','Font, icons, accents and exact position.'),function() return T(h.expanded and S('Weniger anzeigen','Show less') or S('Weitere Einstellungen …','More settings …')) end,function() h.expanded=not h.expanded;ClosePopup(h);HC.UpdateOptions() end)
+ local order={'family','group','element','autoSpellVisual','width','height','scale','gcd','finishCue','hideBlizzard','more'}
+ local basic={};local ordered={}
+ for _,id in ipairs(order) do basic[id]=true;ordered[#ordered+1]=h.controls[id] end
+ for _,r in ipairs(h.rows) do if not basic[r.id] then r.advanced=r.page=='player';ordered[#ordered+1]=r end end
+ h.rows=ordered
+ for _,r in ipairs(h.rows) do
+  for _,widget in ipairs(r.widgets) do Tooltip(widget,r.titleText,r.helpText) end
+ end
+ MenuPreview(h)
+ h.resize=function(w)
+  local width=math.max(300,w-64);h.content:SetWidth(width);h.importText:SetWidth(math.max(240,width-44))
+  local tabWidth=math.min(140,(width-18)/4)
+  for i,p in ipairs(pageNames) do local b=h.nav[p[1]].button;b:SetWidth(tabWidth);b:ClearAllPoints();b:SetPoint('TOPLEFT',16+(i-1)*(tabWidth+6),-62) end
+  local stack=width<440
+  for _,p in pairs(h.pages) do p.used=0 end
+  for _,r in ipairs(h.rows) do
+   local p=h.pages[r.page];local extra=stack and #r.widgets>0 and r.id~='importText' and 28 or 0
+   local visible=not r.advanced or h.expanded;r:SetShown(visible)
+   r:ClearAllPoints();r:SetPoint('TOPLEFT',0,-p.used);r:SetPoint('TOPRIGHT',0,-p.used);r:SetHeight(r.baseHeight+extra)
+   if visible then p.used=p.used+r.baseHeight+extra end;p:SetHeight(p.used)
+   r.title:ClearAllPoints();r.title:SetPoint('TOPLEFT',0,-2)
+   r.title:SetPoint('TOPRIGHT',(stack or #r.widgets==0 or r.id=='importText') and -4 or -258,-2)
+   r.help:ClearAllPoints();r.help:SetPoint('TOPLEFT',0,-40-extra);r.help:SetPoint('TOPRIGHT',-8,-40-extra)
+   if r.button then r.button:ClearAllPoints();r.button:SetPoint('TOPRIGHT',r.checkbox and -214 or -4,-extra) end
+   if r.edit then r.edit:ClearAllPoints();r.edit:SetPoint('TOPRIGHT',-12,-extra);r.slider:ClearAllPoints();r.slider:SetPoint('TOPRIGHT',-104,-4-extra) end
+   if r.id=='name' then h.profileName:ClearAllPoints();h.profileName:SetPoint('TOPRIGHT',-4,-extra) end
+  end
+  h.content:SetHeight(h.pages[h.page].used)
+  local preview=h.page=='player'
+  h.scroll:ClearAllPoints();h.scroll:SetPoint('TOPLEFT',16,-98);h.scroll:SetPoint('BOTTOMRIGHT',-32,preview and 140 or 52)
+ end
+ h:SetScript('OnSizeChanged',function(_,w) h.resize(w) end)
+ h:SetScript('OnShow',function()
+  for _,other in ipairs(hosts) do
+   if other~=h and other:IsShown() then
+    if other.native and SettingsPanel and type(HideUIPanel)=='function' then HideUIPanel(SettingsPanel) else other:Hide() end
+   end
+  end
+  HC.UpdateOptions()
+ end)
+ h:SetScript('OnHide',function()
+  h.previewPanel:SetScript('OnUpdate',nil);HC.HideEffects(h.previewPanel.effects)
+  if GameTooltip then GameTooltip:Hide() end
+  ClosePopup(h);d:Hide();HC.pendingProfileImport=nil;ClearImport(h)
+  DiscardEdits(h)
+  if not HC.menuPreviewTransition then HC.EndMenuPreview(false) end
+ end)
+ h.OnDefault=function() Status(h,S('Zum Zurücksetzen die benannte Aktion im Bereich Profile verwenden.','Use the named reset action on the Profiles page.')) end
+ h.OnRefresh=function() HC.UpdateOptions() end
+ h:Hide();return h
+end
 function HC.UpdateOptions()
-    local p=HC.options
-    if not p or not p.controls then return end
-    local group=HC.GetVisualGroup(HC.db.element)
-    if p.elementButtons then
-        p.controls.element={}
-        for index,button in ipairs(p.elementButtons) do
-            local key=group.elements[index]
-            button.elementKey=key;button:SetShown(key~=nil)
-            if key then
-                button.caption=HC.elements[key].short
-                button:SetWidth(#group.elements==2 and 212 or 140)
-                button:ClearAllPoints();button:SetPoint("TOPLEFT",24+(index-1)*(#group.elements==2 and 222 or 146),-180)
-                p.controls.element[key]=button
-            end
-        end
-    end
-    for key,control in pairs(p.controls) do
-        if key=="family" or key=="element" then
-            for value,button in pairs(control) do button:SetText((HC.db[key]==value and "• " or "")..L(button.caption)) end
-        elseif key=="visualGroup" then
-            control:SetText(L("Material: ")..L(group.title).."  >")
-        elseif key=="autoSpellVisual" then
-            control:SetText(group.key=="factions" and L("Fest · Fraktionsoptik") or L("Zauberoptik: ")..L(HC.db.autoSpellVisual and "Automatisch" or "Manuell"))
-        elseif key=="identity" then
-            control:SetText(L("Akzente: ")..Caption(identities,HC.db.identity).."  >")
-        elseif key=="faction" then
-            control:SetText(L("Ausführung: ")..Caption(factions,HC.db.faction).."  >")
-        elseif key=="preview" then control:SetText(L(HC.preview and "Vorschau beenden / Position sperren" or "Vorschau starten / Position verschieben"))
-        elseif key=="width" then control:SetText(HC.db.width.." px")
-        elseif key=="height" then control:SetText(HC.db.height.." px")
-        elseif key=="scale" then control:SetText(math.floor(HC.db.scale*100+0.5).." %")
-        else control:SetText(L(HC.db[key] and "Ein" or "Aus")) end
-    end
-    p.subtitle:SetText(Caption(families,HC.db.family).." · "..L(HC.elements[HC.db.element].title).." · "..L("ohne Rahmen"))
-    if p.previewNote then
-        p.previewNote:SetText(L(HC.preview and HC.previewMode=="feedback"
-            and "Demo: Zeitänderung / Abbruch / Unterbrechung"
-            or "Zauber / Kanal / GCD · Ereignis-Demo: /hansecast demo"))
-    end
+ if updating or not HC.db then return end;updating=true
+ for _,h in ipairs(hosts) do
+  if not HC.db.profiles[h.selectedProfile] then h.selectedProfile=HC.db.activeProfile end
+  if h.previousActive and (h.previousActive~=HC.db.activeProfile or h.previousRevision~=(HC.profileRevision or 0) or h.previousDB~=HC.db) then
+   h.confirm:Hide();ClearImport(h);HC.pendingProfileImport=nil;DiscardEdits(h)
+  end
+  h.previousActive=HC.db.activeProfile;h.previousRevision=HC.profileRevision or 0;h.previousDB=HC.db;h.title:SetText('Hanse Cast  '..HC.version)
+  h.profileButton:SetText(HC.db.activeProfile..'  >');Enable(h.profileButton,Allowed() and not h.confirm:IsShown())
+  h.active:SetText(T(S('Aktives Profil: ','Active profile: '))..HC.db.activeProfile..' · '..#HC.ProfileNames()..'/12')
+  h.status:SetText(not Allowed() and T(messages.combat) or T(h.message or S('Änderungen gelten sofort für das aktive Profil.','Changes apply immediately to the active profile.')))
+  for key,nav in pairs(h.nav) do
+   nav.button:SetText((h.page==key and '|cffffd080> |r' or '')..T(nav.text))
+   if h.page==key then nav.button:SetBackdropColor(.25,.21,.13,1) else nav.button:SetBackdropColor(.055,.05,.04,.95) end
+   Enable(nav.button,Allowed() and not h.confirm:IsShown())
+  end
+  for key,page in pairs(h.pages) do page:SetShown(h.page==key) end;h.content:SetHeight(h.pages[h.page].used)
+  for _,r in ipairs(h.rows) do
+   r.title:SetText(T(r.titleText));r.help:SetText(T(r.helpText));if r.refresh then r.refresh() end
+   local on=Allowed() and not h.confirm:IsShown() and (not r.enabled or r.enabled());for _,w in ipairs(r.widgets) do Enable(w,on) end
+  end
+  h.resize(h:GetWidth())
+  local p=h.previewPanel
+  local preview=h:IsShown() and (not h.IsVisible or h:IsVisible()) and h.page=='player' and Allowed() and not h.confirm:IsShown()
+  p:SetShown(preview);p:SetScript('OnUpdate',preview and p.tick or nil)
+  if preview then p.paint() else HC.HideEffects(p.effects) end
+  p.caption:SetText(T(S('Original-Vorschau · bei Bedarf verkleinert','Original preview · scaled to fit')))
+  p.place:SetText(T(S('Positionieren','Position')));Enable(p.place,Allowed() and not h.confirm:IsShown())
+  h.confirm.accept:SetText(T(S('Bestätigen','Confirm')));h.confirm.cancel:SetText(T(S('Abbrechen','Cancel')))
+  if h.confirm:IsShown() then h.confirm.text:SetText(T(h.confirm.caption)) end
+ end
+ updating=false
 end
-
-function HC.ToggleOptions()
-    if InCombatLockdown() then HC.Print(L("Einstellungen bitte außerhalb des Kampfes öffnen."));return end
-    if HC.options then HC.UpdateOptions();HC.options:SetShown(not HC.options:IsShown());return end
-    local p=CreateFrame("Frame","HanseCastOptions",UIParent,"BackdropTemplate")
-    HC.options=p;p.controls={}
-    p:SetSize(480,616);p:SetPoint("LEFT",UIParent,"LEFT",28,0)
-    p:SetClampedToScreen(true);p:SetFrameStrata("DIALOG");p:EnableMouse(true)
-    p:SetBackdrop({bgFile=texture,edgeFile=texture,edgeSize=1})
-    p:SetBackdropColor(0.045,0.055,0.070,1);p:SetBackdropBorderColor(0.62,0.47,0.27,1)
-    local function Text(text,x,y,font)
-        local label=p:CreateFontString(nil,"OVERLAY",font or "GameFontHighlight")
-        label:SetPoint("TOPLEFT",x,y);if HC.Localize then HC.Localize(label,text) else label:SetText(text) end;return label
-    end
-    Text("Hanse Cast",24,-20,"GameFontNormalLarge")
-    p.subtitle=Text("",24,-45,"GameFontHighlightSmall")
-    local close=CreateFrame("Button",nil,p,"UIPanelCloseButton");close:SetPoint("TOPRIGHT")
-    local function Button(text,x,y,w,action)
-        local b=CreateFrame("Button",nil,p,"UIPanelButtonTemplate")
-        b:SetSize(w,26);b:SetPoint("TOPLEFT",x,y);if HC.Localize then HC.Localize(b,text) else b:SetText(text) end
-        b:SetScript("OnClick",function() if InCombatLockdown() then return end;action();HC.UpdateOptions() end)
-        return b
-    end
-    p.controls.family={}
-    for index,item in ipairs(families) do
-        local key,caption=item[1],item[2]
-        local x=index<=3 and 24+(index-1)*146 or 97+(index-4)*146
-        local y=index<=3 and -76 or -106
-        local b=Button(caption,x,y,140,function() HC.db.family=key;HC.ApplyTheme() end)
-        b.caption=caption;p.controls.family[key]=b
-    end
-    p.controls.visualGroup=Button("",24,-146,210,function()
-        local current=HC.GetVisualGroup(HC.db.element)
-        for index,group in ipairs(HC.visualGroups) do
-            if group==current then
-                HC.db.element=HC.visualGroups[index % #HC.visualGroups+1].elements[1];break
-            end
-        end
-        local faction=HC.elements[HC.db.element].faction
-        if faction then HC.db.faction=faction;HC.ApplyLayout() else HC.ApplyTheme() end
-    end)
-    p.controls.autoSpellVisual=Button("",246,-146,210,function()
-        if HC.elements[HC.db.element].faction then return end
-        HC.db.autoSpellVisual=not HC.db.autoSpellVisual
-        HC.UpdateSpellTheme(HC.preview and nil or HC.cast);HC.ApplyTheme()
-    end)
-    p.elementButtons={};p.controls.element={}
-    for index=1,3 do
-        local b
-        b=Button("",24+(index-1)*146,-180,140,function()
-            if not b.elementKey then return end
-            HC.db.element=b.elementKey
-            local faction=HC.elements[b.elementKey].faction
-            if faction then HC.db.faction=faction;HC.ApplyLayout() else HC.ApplyTheme() end
-        end)
-        p.elementButtons[index]=b
-    end
-    p.controls.identity=Button("",24,-214,210,function()
-        local selected=1
-        for index,item in ipairs(identities) do if item[1]==HC.db.identity then selected=index end end
-        HC.db.identity=identities[selected % #identities+1][1]
-        HC.ApplyTheme()
-    end)
-    p.controls.faction=Button("",246,-214,210,function()
-        local selected=1
-        for index,item in ipairs(factions) do if item[1]==HC.db.faction then selected=index end end
-        HC.db.faction=factions[selected % #factions+1][1]
-        HC.ApplyLayout()
-    end)
-    p.controls.preview=Button("Vorschau",24,-250,432,function() HC.TogglePreview() end)
-    p.previewNote=Text("",24,-281,"GameFontHighlightSmall")
-    local function Dimension(label,key,step,low,high,y)
-        Text(label,24,y-5);p.controls[key]=Text("",265,y-5)
-        Button("−",364,y,42,function() HC.db[key]=math.max(low,HC.db[key]-step);HC.ApplyLayout() end)
-        Button("+",414,y,42,function() HC.db[key]=math.min(high,HC.db[key]+step);HC.ApplyLayout() end)
-    end
-    Dimension("Breite","width",20,180,600,-306)
-    Dimension("Höhe","height",2,24,60,-336)
-    Dimension("Skalierung","scale",0.1,0.6,2,-366)
-    local function Toggle(label,key,y,changed)
-        Text(label,24,y-5)
-        p.controls[key]=Button("",384,y,72,function() HC.db[key]=not HC.db[key];if changed then changed() end end)
-    end
-    Toggle("Globaler Cooldown · schmale Linie","gcd",-406,function()
-        if not HC.db.gcd then HC.DrawGCD(nil,GetTime()) end
-        if HC.RefreshGCD then HC.RefreshGCD() end
-    end)
-    Toggle("Abschlusslicht · kurzer Lichtimpuls","finishCue",-436,function() if not HC.db.finishCue then HC.HideFinishCue() end end)
-    Toggle("Blizzard-Castbar ersetzen","hideBlizzard",-466,function() if HC.UpdateBlizzard then HC.UpdateBlizzard() end end)
-    Button("Position zurücksetzen",24,-506,432,function() HC.db.x=0;HC.db.y=-180;HC.ApplyLayout() end)
-    Button("Erweitert / Profile",24,-538,432,function() HC.OpenAdvancedOptions() end)
-    local note=Text("Bei nicht verfügbaren Daten oder Grafiken bleibt die Standardanzeige erhalten.",24,-580,"GameFontHighlightSmall")
-    note:SetWidth(432);note:SetWordWrap(true)
-    HC.UpdateOptions();p:Show()
+HC.UpdateAdvancedOptions=HC.UpdateOptions
+local function Fallback()
+ if HC.settingsCanvas then
+  if HC.settingsCanvas:IsShown() and SettingsPanel and type(HideUIPanel)=='function' then HideUIPanel(SettingsPanel)
+  else HC.settingsCanvas:Hide() end
+ end
+ if not HC.options then
+  local h=HC.CreateMenuCanvas(UIParent,false);HC.options=h
+  h:SetSize(820,620);h:SetPoint('CENTER');h:SetClampedToScreen(true);h:SetFrameStrata('DIALOG');h:EnableMouse(true)
+  h:SetScale(math.min(1,(UIParent:GetHeight()-40)/620,(UIParent:GetWidth()-40)/820))
+  h:SetBackdrop({bgFile='Interface\\Buttons\\WHITE8X8',edgeFile='Interface\\Buttons\\WHITE8X8',edgeSize=1});h:SetBackdropColor(.045,.055,.07,1);h:SetBackdropBorderColor(.62,.47,.27,1)
+  local close=CreateFrame('Button',nil,h,'UIPanelCloseButton');close:SetPoint('TOPRIGHT');close:SetScript('OnClick',function() h:Hide() end)
+  if type(UISpecialFrames)=='table' then UISpecialFrames[#UISpecialFrames+1]='HanseCastOptions' end
+ end
+ HC.options:Show();HC.UpdateOptions()
 end
+function HC.OpenOptions()
+ if not Allowed() then if HC.Print then HC.Print(T(messages.combat)) end;return end
+ if HC.RegisterSettings then HC.RegisterSettings() end
+ if HC.settingsCategory and Settings and type(Settings.OpenToCategory)=='function' then
+  local c=HC.settingsCategory;local id=c.GetID and c:GetID() or c.ID or c.id
+  if id then
+   local ok=pcall(Settings.OpenToCategory,id)
+   if ok then if HC.options then HC.options:Hide() end;HC.UpdateOptions();return end
+  end
+ end
+ Fallback()
+end
+function HC.ToggleOptions() HC.OpenOptions() end
+function HC.OpenAdvancedOptions()
+ HC.menuPage='player';HC.OpenOptions()
+ for _,h in ipairs(hosts) do h.page='player';h.expanded=true end;HC.UpdateOptions()
+end
+function HC.StartMenuPreview(h,unit,mode)
+ if not Allowed() then return end;HC.EndMenuPreview(false)
+ HC.menuPreviewHost=h;HC.menuPreviewTransition=true
+ if h.native and SettingsPanel and type(HideUIPanel)=='function' then HideUIPanel(SettingsPanel) else h:Hide() end
+ HC.menuPreviewTransition=false
+ if unit=='player' then if HC.TogglePreview then HC.TogglePreview(mode) end elseif HC.PreviewUnitBars then HC.PreviewUnitBars(true,unit) end
+ if not HC.positionToolbar then
+  local f=CreateFrame('Frame','HanseCastPositionToolbar',UIParent,'BackdropTemplate');HC.positionToolbar=f
+  f:SetSize(500,100);f:SetPoint('TOP',0,-80);f:SetFrameStrata('DIALOG');f:SetClampedToScreen(true);f:EnableMouse(true)
+  f:SetBackdrop({bgFile='Interface\\Buttons\\WHITE8X8',edgeFile='Interface\\Buttons\\WHITE8X8',edgeSize=1});f:SetBackdropColor(.04,.06,.08,1)
+  f.text=Label(f,'');f.text:SetPoint('TOPLEFT',16,-12);f.text:SetPoint('TOPRIGHT',-16,-12)
+  f.done=Button(f,'',function() HC.EndMenuPreview(true) end);f.done:SetPoint('BOTTOM',0,12)
+  f:SetScript('OnHide',function() if not HC.endingMenuPreview then HC.EndMenuPreview(false) end end)
+  if type(UISpecialFrames)=='table' then UISpecialFrames[#UISpecialFrames+1]='HanseCastPositionToolbar' end
+ end
+ local f=HC.positionToolbar
+ f.text:SetText(T(S('Künstliche Vorschau · Ziehen mit linker Maustaste · ','Artificial preview · Drag with left mouse button · '))..T(unit=='player' and S('Spieler','Player') or unit=='target' and 'Ziel' or 'Fokus'))
+ f.done:SetText(T(S('Fertig – zurück zu Einstellungen','Done – return to settings')));f:Show()
+end
+function HC.EndMenuPreview(reopen)
+ if HC.endingMenuPreview then return end;HC.endingMenuPreview=true
+ -- Restore the saved anchor before any exit path clears the drag state,
+ -- including combat, where TogglePreview is intentionally unavailable.
+ if HC.CancelPreviewDrag then HC.CancelPreviewDrag() end
+ local host=HC.menuPreviewHost;HC.menuPreviewHost=nil
+ if HC.preview then
+  if Allowed() and HC.TogglePreview then HC.TogglePreview()
+  else
+   if HC.ClearCastResult then HC.ClearCastResult() end
+   HC.preview=false;HC.previewMode=nil
+   if HC.frame then HC.frame:StopMovingOrSizing();HC.frame:EnableMouse(false);HC.frame.hint:Hide() end
+  end
+ end
+ if HC.unitBarsPreview and HC.PreviewUnitBars and Allowed() then HC.PreviewUnitBars(false) end
+ if HC.positionToolbar then HC.positionToolbar:Hide() end
+ if HC.frame then HC.frame:StopMovingOrSizing();HC.frame:EnableMouse(false) end
+ if host and HC.SaveActiveProfile then HC.SaveActiveProfile() end
+ HC.endingMenuPreview=false;if reopen and host and Allowed() then HC.OpenOptions() end
+end
+local events=CreateFrame('Frame');events:RegisterEvent('PLAYER_REGEN_DISABLED');events:RegisterEvent('PLAYER_REGEN_ENABLED')
+events:SetScript('OnEvent',function(_,event)
+ if event=='PLAYER_REGEN_DISABLED' then
+   for _,h in ipairs(hosts) do ClosePopup(h);h.confirm:Hide();ClearImport(h);DiscardEdits(h) end
+  HC.pendingProfileImport=nil;HC.EndMenuPreview(false)
+ end
+ HC.UpdateOptions()
+end)

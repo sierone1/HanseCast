@@ -2,7 +2,7 @@
 
 ![Hanse Cast](docs/public/logo.png)
 
-Animated cast bars for **WoW Forever 1.60.1**. Current version: **0.9.1 beta**.
+Animated cast bars for **WoW Forever 1.60.1**. Current version: **1.0.0**.
 
 ## Features
 
@@ -11,6 +11,8 @@ Animated cast bars for **WoW Forever 1.60.1**. Current version: **0.9.1 beta**.
 - 145 visual variants, selectable independently of character class or faction.
 - Optional target and focus cast bars.
 - Named profiles with validated text import/export.
+- Compact native-style settings in WoW Settings → AddOns, with four tabs and hover help.
+- Original-art animated menu preview and an explicit positioning mode.
 - German and English interface. No additional addon or runtime library required.
 
 ## Installation
@@ -32,12 +34,13 @@ Type `/hansecast` for settings, `/hansecast test` for preview, and
 - [Changelog](CHANGELOG.md)
 - [Credits and resource notice](docs/public/CREDITS.txt)
 
-## Beta status
+## Compatibility and testing
 
 This package targets WoW Forever 1.60.1 / interface 16001. Other editions are not
-currently supported. Initial live gameplay, frame-time comparisons and persistence
-of the tested settings after reload/restart have been checked. Wider functional,
-class/style and target/focus coverage remains part of beta testing.
+currently supported. Local simulated-client tests cover cast events, profiles,
+settings, rendering and resource recovery. Earlier versions were exercised in live
+gameplay and reload/restart persistence checks. These are not a comprehensive native
+test of every class, spell, display scale or addon combination in version 1.0.0.
 
 Restricted or unavailable cast data can hide the affected custom bar. Fully
 restricted duration objects and empower casts are not supported. Channel guide
@@ -56,5 +59,5 @@ third-party resources remain the property of their respective owners.
 Hanse Cast ist ein eigenständiges Zauberleisten-Addon für WoW Forever 1.60.1.
 Den inneren Ordner `HanseCast` nach `Interface/AddOns` kopieren und WoW vollständig
 neu starten. Mit `/hansecast` die Einstellungen öffnen. Die deutsche Anleitung
-und Menüerklärung sind oben verlinkt. Version 0.9.1 ist eine Beta; die Lizenz bleibt
+und Menüerklärung sind oben verlinkt. Aktuelle Version: 1.0.0; die Lizenz bleibt
 All Rights Reserved bei kostenloser persönlicher Nutzung.

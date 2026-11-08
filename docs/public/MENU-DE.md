@@ -1,68 +1,40 @@
-# Menüanleitung
+# Hanse Cast 1.0.0 – Menüanleitung
 
-Das Menü öffnest du außerhalb des Kampfes mit `/hansecast`. Die Zeile unter dem Titel zeigt die aktuell manuell gewählte Kategorie und Optik. Ein Punkt vor einer Schaltflächenbeschriftung markiert die Auswahl. Schaltflächen mit `>` wechseln bei jedem Klick zur nächsten Möglichkeit.
+Öffne **Escape → Optionen/Einstellungen → AddOns → Hanse Cast** oder gib `/hansecast` ein. Die Einstellungen lassen sich direkt im WoW-Fenster bearbeiten. Wenn die benötigte Settings-Schnittstelle fehlt, öffnet sich ein eigenes Fenster mit denselben Bereichen.
 
-## Hauptmenü von oben nach unten
+Oben steht immer das aktive Profil. Normale Änderungen gelten sofort für dieses Profil. Öffnen und Schließen des Menüs setzt keine Einstellungen zurück. Im Kampf sind Änderungen gesperrt.
 
-| Einstellung | Bedeutung |
-| --- | --- |
-| Elementstrom / Splitter & Funken / Seidenfluss / Impuls / Nebellicht | Wählt die grafische Kategorie der Leiste. Das verändert die Darstellung, nicht den Zauber oder seine Dauer. |
-| Material: Magier > | Wechselt durch die Materialgruppen: die neun Klassen sowie Fraktionen. Die Auswahl ist unabhängig von der Klasse deines Charakters. |
-| Frost / Feuer / Arkan | Wählt eine Optik innerhalb der Materialgruppe. Andere Gruppen zeigen andere Namen. Unter Fraktionen stehen Allianz und Horde zur Wahl. |
-| Zauberoptik: Automatisch / Manuell | Automatisch verwendet bei bekannten, zugänglichen Zauber-IDs eine passende Optik. Manuell hält deine Auswahl fest. Unbekannte Zauber und Vorschauen verwenden die manuelle Auswahl. |
-| Fest · Fraktionsoptik | Bei einer Fraktionsoptik bleibt die ausgewählte Darstellung während aller Zauber gleich. Die automatische Zauberoptik wird dafür nicht umgeschaltet; ihre gespeicherte Einstellung gilt wieder bei Klassenoptiken. |
-| Akzente: Neutral / Klasse > | Neutral belässt die Akzentfarben. Klasse mischt die Farbe deiner Charakterklasse dezent in Nebenakzente. Die Hauptfarbe der gewählten Optik bleibt erhalten. |
-| Ausführung: Neutral / Allianz / Horde > | Neutral blendet das kleine Fraktionswappen aus. Allianz oder Horde wählt ein natives Wappen links neben der Spielerleiste. Das ändert nicht die Fraktion deines Charakters. |
-| Vorschau starten / Position verschieben | Zeigt eine künstliche Leiste. Ziehe sie mit gedrückter linker Maustaste an die gewünschte Position. |
-| Vorschau beenden / Position sperren | Beendet die Vorschau und sperrt das Verschieben. Danach echte Zauber zum Prüfen verwenden. |
-| Breite / Höhe | Ändert die Leistenabmessungen mit Minus und Plus. Die wirkliche Bildschirmgröße hängt auch von der WoW-Oberflächenskalierung ab. |
-| Skalierung | Vergrößert oder verkleinert die gesamte Leiste. Die Größenbegrenzung kann sehr kleine Kombinationen aus Höhe und Skalierung anpassen. |
-| Globaler Cooldown · schmale Linie | Schaltet die separate Anzeige der globalen Abklingzeit ein oder aus. Eine Fähigkeit ohne eigene Zauberzeit muss deshalb keine künstliche Castbar erhalten. |
-| Abschlusslicht · kurzer Lichtimpuls | Schaltet den kurzen zusätzlichen Lichtimpuls zum Abschluss ein oder aus. |
-| Blizzard-Castbar ersetzen | Ein erlaubt, die normale Spieler-Zauberleiste während eines aktiven Hanse-Zaubers auszublenden, wenn das sicher möglich ist. Bei fehlenden Daten oder Grafiken bleibt die Standardanzeige als Rückfall verfügbar. Das ersetzt keine Blizzard-Ziel-/Fokusframes. |
-| Position zurücksetzen | Setzt nur die Position der Spielerleiste auf die Ausgangsposition zurück; es löscht keine Profile und setzt nicht die gesamte Gestaltung zurück. |
-| Erweitert / Profile | Öffnet die drei Bereiche Komfort, Profile und Ziel / Fokus. |
+## Die vier Reiter
 
-Auf dem bereitgestellten Beispielbild sind Splitter & Funken, Magier und Frost ausgewählt. Die Zauberoptik steht auf Automatisch. GCD-Anzeige, Abschlusslicht und das Ersetzen der Blizzard-Spielerleiste sind eingeschaltet. Diese Aufnahme zeigt persönliche Einstellungen, nicht die Werkseinstellung.
+- **Spieler:** Kategorie, Themengruppe, manuelle Optik, Zauberautomatik, Breite, Höhe, Skalierung, GCD, Abschlusslicht und Blizzard-Ersatz. **Weitere Einstellungen** öffnet Akzente, Wappen, genaue Position, Schrift, Zeitanzeige, Deckkraft, Symbol, Latenz und Kanal-Hilfslinien.
+- **Ziel & Fokus:** zuerst die betroffene Leiste auswählen. Aktivierung, Sichtbarkeit, Symbol, Optik, Größe und Position gelten nur für diese Leiste.
+- **Profile:** auswählen, aktivieren, erstellen, kopieren, exportieren, importieren, löschen oder zurücksetzen.
+- **Hilfe:** Sprache, Kurzanleitung, Grenzen, Ereignis-Demo und Statusausgabe.
 
-## Erweitert: Komfort
+Fahre für Erklärungen mit der Maus über eine Einstellung oder ihr Bedienelement. Änderungen gelten sofort. Zahlenfelder: Enter übernimmt, Escape verwirft die laufende Eingabe. Die Werte sind UI-Einheiten, nicht zwingend physische Pixel.
 
-- **Sprache:** automatisch anhand der Spielsprache, Deutsch oder Englisch.
-- **Schrift / Schriftgröße:** Schriftbild und Größe der Beschriftungen.
-- **Zeit:** Restzeit, verstrichene Zeit, beides oder keine Zeitanzeige.
-- **Deckkraft:** Sichtbarkeit der Leiste anpassen.
-- **Zaubersymbol:** ausblenden oder links/rechts anzeigen.
-- **Latenzmarkierung:** optionale Orientierung anhand der lesbaren Weltlatenz. Sie misst weder deinen Tastendruck noch das exakte Zauberwarteschlangenfenster.
-- **Kanal-Hilfslinien / Anzahl Abschnitte:** gleichmäßige, manuell eingestellte Unterteilung. Keine automatische Erkennung echter Schadens- oder Heilticks.
+## Vorschau und Positionierung
 
-## Erweitert: Profile
+Die eingebettete Original-Vorschau verwendet dieselben Originaltexturen und dieselbe Effekt-Zeichenfunktion wie die Castbar. Sie zeigt die manuell gewählte Optik mit einem künstlichen Dreisekundenverlauf, bei Bedarf passend verkleinert. Sie ist eine Gestaltungsvorschau, keine maßstabsgetreue Vorschau aller Text-, Symbol- und Zusatzanzeigen. Sie verändert weder die Spielerposition noch das aktive Zauberereignis und stoppt bei verborgenem Menü, anderem Reiter oder Kampf.
 
-Mit der oberen Schaltfläche ein Profil auswählen. Das Sternchen `*` markiert das aktive Profil. **Wechseln** aktiviert das ausgewählte Profil.
+„Positionieren“ blendet das große Menü aus und zeigt eine künstliche Vorschau mit einer kleinen Werkzeugleiste. Ziehe die Leiste mit der linken Maustaste. „Fertig – zurück zu Einstellungen“ beendet die Vorschau, sperrt die Position und öffnet die Einstellungen wieder. Escape beendet die Vorschau ebenfalls. Bei Kampfbeginn werden Vorschauen und Verschieben beendet.
 
-- **Neues Profil:** im Feld Profilname einen neuen Namen eingeben; erstellt ein Profil mit Standardwerten und aktiviert es.
-- **Kopie erstellen:** erstellt unter dem eingegebenen Namen eine Kopie der aktuellen Einstellungen und aktiviert sie. Sinnvoll, um eine Gestaltung zu behalten und eine zweite auszuprobieren.
-- **Löschen:** entfernt das ausgewählte Profil nach einem zweiten Bestätigungsklick. Das letzte verbleibende Profil kann nicht gelöscht werden.
-- **Zurücksetzen:** setzt das ausgewählte Profil nach Bestätigung auf Standardwerte zurück. Das ist umfassender als Position zurücksetzen im Hauptmenü.
-- **Exportieren:** schreibt die Einstellungen des aktiven Profils in das Textfeld. Den markierten Text zum Sichern oder Weitergeben kopieren.
-- **Import prüfen:** eingefügten Profiltext prüfen. Dabei werden noch keine neuen Einstellungen übernommen.
-- **Import anwenden:** übernimmt den zuvor geprüften Text in die aktuellen Einstellungen. Wenn du die bisherige Gestaltung behalten möchtest, vorher eine Profilkopie erstellen. Nach einer Änderung des Importtexts muss er erneut geprüft werden.
+Ziel/Fokus-Vorschauen zeigen nur die ausgewählte Leiste. Eine Vorschau aktiviert eine abgeschaltete Leiste nicht dauerhaft. Prüfe die Darstellung anschließend mit echten Zaubern.
 
-Es sind bis zu zwölf Profile möglich. Im geprüften Stand bleiben Profile, Position und Optik nach `/reload` und vollständigem Neustart erhalten.
+## Gestaltung verstehen
 
-## Erweitert: Ziel / Fokus
+**Kategorie** bestimmt den grafischen Aufbau. **Themengruppe** wählt eine Klassen- oder Fraktionsgestaltung unabhängig von deiner eigenen Klasse. **Manuelle Optik** wird auch für unbekannte Zauber und Vorschauen genutzt. Die Automatik wählt nur bei bekannten, zugänglichen Zaubern eine passende Optik. Fraktionsoptiken bleiben fest und bewahren die gespeicherte Automatikpräferenz; ihre Auswahl setzt zunächst das passende Wappen, das anschließend separat geändert werden kann.
 
-Zuerst **Ziel** oder **Fokus** auswählen. Die folgenden Einstellungen gelten nur für diese Auswahl:
+**Akzentfarbe** verändert Nebenakzente, nicht die Hauptfarbe. **Fraktionswappen** ist ein kleines Symbol und ändert nicht die Charakterfraktion. Die **Latenzmarkierung** ist nur eine Orientierung anhand gemeldeter Weltlatenz. **Kanal-Hilfslinien** sind gleichmäßige manuelle Abschnitte, keine erkannten Schadens- oder Heilticks.
 
-- **Aktiv:** die jeweilige eigene Leiste ein- oder ausschalten.
-- **Sichtbarkeit:** passende Zauber innerhalb und außerhalb des Kampfes anzeigen oder auf den Kampf beschränken. Immer bedeutet nicht, dass eine leere Leiste dauerhaft angezeigt wird.
-- **Symbol:** Zaubersymbol ein- oder ausschalten.
-- **Material / Zauberoptik:** Darstellung wählen. Übernehmen verwendet die entsprechende Auswahl der Spielerleiste.
-- **Breite / Höhe / Skalierung:** Größe dieser Leiste unabhängig einstellen.
-- **Position X / Y:** horizontale und vertikale Position anpassen.
-- **Vorschau Ziel / Fokus:** künstliche Leisten zum Positionieren anzeigen. Die Vorschau ist kein Nachweis zugänglicher gegnerischer Zauberdaten.
+## Profile sicher verwenden
 
-## Ein einfacher Start
+Profile sind accountweit gespeichert; bis zu zwölf sind möglich. Die Profilauswahl oben rechts wechselt direkt das aktive Profil. Im Reiter Profile aktiviert die Auswahl allein noch nichts. „Aktivieren“ wechselt bewusst. „Neues Profil“ erstellt Standardwerte unter dem eingegebenen Namen. „Kopie erstellen“ kopiert das aktive Profil und aktiviert die Kopie. Export verwendet immer das aktive Profil; Kopieren des Texts mit Strg+C.
 
-Für eine feste Optik zuerst Kategorie und Materialgruppe wählen, dann eine Optik auswählen und Zauberoptik auf Manuell stellen. Anschließend Vorschau einschalten, verschieben, Größe anpassen, Vorschau beenden und einen echten Zauber wirken. Weitere Optionen lassen sich später einzeln ergänzen.
+Import: Text mit Strg+V einfügen → Prüfen → entweder unter dem eingegebenen Namen neu importieren oder das aktive Profil nach Bestätigung überschreiben. Prüfung allein ändert nichts. Jede Textänderung verwirft das Prüfergebnis. Bei ungültigem Namen, bereits vergebenem Namen oder vollen Profilplätzen wird kein halbfertiges Profil angelegt.
 
-`/hansecast demo` zeigt künstliche Beispiele zu Zeitänderungen und Abbrüchen. `/hansecast status` liefert Diagnoseinformationen. Die Demo ersetzt keinen Spieltest.
+Löschen und Zurücksetzen nennen das ausgewählte Profil in einem Bestätigungsdialog. Zurücksetzen setzt dieses Profil auf Standardwerte und aktiviert es. „Spielerposition zurücksetzen“ betrifft dagegen ausschließlich die Spielerposition. Vorhandene 0.9.1-Profile und das Exportformat HANSECAST:1 bleiben erhalten; SavedVariables nicht löschen.
+
+## Grenzen
+
+Geschützte oder fehlende Zauberdaten können die eigene Anzeige verhindern. Keine Empower-Unterstützung. Die eingebetteten Seiten bieten derzeit keine eigene Volltextsuche. Menü und Kernfunktionen werden automatisiert mit simulierten Spiel-APIs geprüft; echte Clientdarstellung und Spielverhalten benötigen zusätzlich die Ingame-Prüfung.

@@ -1,14 +1,22 @@
 local _,HC=...
 local fonts={default='Fonts\\FRIZQT__.TTF',modern='Fonts\\ARIALN.TTF'}
+-- These regions are owned exclusively by this module. Parent-frame hiding does
+-- not change a child's own shown flag, so retain the cache across frame hides.
+local function Visible(region,shown)
+ shown=shown==true
+ if region.hcComfortShown==shown then return end
+ region.hcComfortShown=shown
+ if shown then region:Show() else region:Hide() end
+end
 function HC.CreateComfortView(f)
- f.spellIcon=f:CreateTexture(nil,'ARTWORK');f.spellIcon:Hide()
- f.latencyMark=f:CreateTexture(nil,'OVERLAY');f.latencyMark:SetColorTexture(1,.72,.3,.7);f.latencyMark:Hide()
+ f.spellIcon=f:CreateTexture(nil,'ARTWORK');Visible(f.spellIcon,false)
+ f.latencyMark=f:CreateTexture(nil,'OVERLAY');f.latencyMark:SetColorTexture(1,.72,.3,.7);Visible(f.latencyMark,false)
  f.tickMarks={}
- for i=1,9 do local t=f:CreateTexture(nil,'OVERLAY');t:SetColorTexture(.85,.9,1,.5);t:Hide();f.tickMarks[i]=t end
+ for i=1,9 do local t=f:CreateTexture(nil,'OVERLAY');t:SetColorTexture(.85,.9,1,.5);Visible(t,false);f.tickMarks[i]=t end
 end
 function HC.HideComfortView()
  local f=HC.frame;if not f then return end
- if f.spellIcon then f.spellIcon:Hide();f.latencyMark:Hide();for _,t in ipairs(f.tickMarks) do t:Hide() end end
+ if f.spellIcon then Visible(f.spellIcon,false);Visible(f.latencyMark,false);for _,t in ipairs(f.tickMarks) do Visible(t,false) end end
 end
 function HC.ApplyComfortLayout()
  local f,db=HC.frame,HC.db;if not f or not db then return end
@@ -45,27 +53,41 @@ local function Latency(now)
 end
 function HC.DrawComfort(cast,now,duration)
  local f,db=HC.frame,HC.db;if not f.spellIcon then return end
- f.spellIcon:Hide();f.latencyMark:Hide();for _,t in ipairs(f.tickMarks) do t:Hide() end
+ local showIcon=false
  if db.iconPosition and db.iconPosition~='hidden' and HC.Accessible(cast.icon)
   and (type(cast.icon)=='number' or type(cast.icon)=='string') then
-  if f.spellIconValue~=cast.icon then
+  local id=HC.Accessible(cast.id) and cast.id or nil
+  if type(id)~='number' and type(id)~='string' then id=nil end
+  local newCast
+  if id~=nil then newCast=id~=f.spellIconCastID
+  else newCast=cast.start~=f.spellIconCastStart or cast.channel~=f.spellIconCastChannel end
+  -- Successful loads stay cached. A failed optional icon can recover on the
+  -- next cast, or once per second while the same cast is still being drawn.
+  -- No timers and no per-frame retry loop for a missing resource.
+  if f.spellIconValue~=cast.icon or (not f.spellIconLoaded and
+   (newCast or not f.spellIconRetryAt or now>=f.spellIconRetryAt or now<(f.spellIconAttemptAt or now))) then
    f.spellIconValue=cast.icon;f.spellIconLoaded=f.spellIcon:SetTexture(cast.icon)~=false
+   f.spellIconCastID=id;f.spellIconCastStart=cast.start;f.spellIconCastChannel=cast.channel
+   f.spellIconAttemptAt=now;f.spellIconRetryAt=f.spellIconLoaded and nil or now+1
   end
-  if f.spellIconLoaded then f.spellIcon:Show() end
+  showIcon=f.spellIconLoaded==true
  end
+ Visible(f.spellIcon,showIcon)
+ local showLatency=false
  if db.latency and not cast.channel and duration>0 then
   local lag=Latency(now)
   if lag and lag>0 then
    local width=math.min(db.width*.25,db.width*lag/duration)
-   f.latencyMark:SetSize(math.max(1,width),2);f.latencyMark:SetPoint('BOTTOMRIGHT',f,'TOPRIGHT',0,1);f.latencyMark:Show()
+   f.latencyMark:SetSize(math.max(1,width),2);f.latencyMark:SetPoint('BOTTOMRIGHT',f,'TOPRIGHT',0,1);showLatency=true
   end
  end
+ Visible(f.latencyMark,showLatency)
  -- Explicitly manual equal-segment guides. These are NOT observed damage/heal
  -- ticks and never infer a spell cadence or claim knowledge of secret data.
- if db.channelTicks and cast.channel and duration>0 then
-  local count=math.floor(db.channelTickCount or 5)
-  for i=1,math.min(9,count-1) do
-   local t=f.tickMarks[i];t:SetSize(1,5);t:SetPoint('TOPLEFT',f,'TOPLEFT',db.width*i/count,-1);t:Show()
-  end
+ local count=db.channelTicks and cast.channel and duration>0 and math.floor(db.channelTickCount or 5) or 0
+ for i,t in ipairs(f.tickMarks) do
+  local shown=i<count
+  if shown then t:SetSize(1,5);t:SetPoint('TOPLEFT',f,'TOPLEFT',db.width*i/count,-1) end
+  Visible(t,shown)
  end
 end

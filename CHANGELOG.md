@@ -1,3 +1,61 @@
+# Hanse Cast 1.0.0
+
+## English
+
+Release for **WoW Forever 1.60.1 / Interface 16001**. Changes since the public 0.9.1 beta:
+
+- Rebuilt settings inside WoW Settings → AddOns: four compact tabs, native-style controls, hover explanations, and expandable advanced settings.
+- Added an independent animated menu sample using the original cast-bar artwork, plus a positioning toolbar that returns to settings.
+- Added a quick profile selector and clearer profile import, export, copy, reset and delete workflows.
+- Prevented unfinished numeric edits from being applied to a different unit or profile after switching context.
+- Bound profile imports to the exact checked text and active profile; closing or switching settings windows invalidates stale input.
+- Fixed movement cleanup when a real cast, channel or combat interrupts a draggable preview. Late drag events no longer save an unintended position.
+- Made the optional class accent colour affect secondary light layers while preserving the original main artwork and neutral appearance.
+- Added bounded recovery for temporarily unavailable spell icons on player, target and focus bars.
+- Reduced redundant visibility updates for disabled optional player-bar elements.
+
+**Updating:** keep your SavedVariables. Existing profiles, settings and HANSECAST:1 exports remain compatible. No additional addon is required; Hanse Cast Check is not included.
+
+**Known limits:** accessible cast data is required; fully restricted duration objects and empower casts are unsupported. Channel guides are manual markers. The menu sample is a scaled artwork preview rather than an exact preview of every text/icon option. Local automated checks do not cover every native-client, spell or addon combination. Other WoW editions are not supported by this package.
+
+## Deutsch
+
+Release für **WoW Forever 1.60.1 / Interface 16001**. Änderungen seit der öffentlichen Beta 0.9.1:
+
+- Einstellungen direkt unter WoW Optionen/Einstellungen → AddOns überarbeitet: vier kompakte Reiter, Bedienelemente im WoW-Stil, Erklärungen beim Darüberfahren und ausklappbare Zusatzoptionen.
+- Unabhängige animierte Menüvorschau mit den Originalgrafiken sowie Positionierungsleiste mit Rückkehr zu den Einstellungen ergänzt.
+- Schnelle Profilauswahl und verständlichere Abläufe für Import, Export, Kopieren, Zurücksetzen und Löschen ergänzt.
+- Verhindert, dass noch nicht bestätigte Zahlen nach einem Wechsel bei der falschen Einheit oder im falschen Profil landen.
+- Profilimporte an den exakt geprüften Text und das aktive Profil gebunden; veraltete Eingaben werden beim Schließen oder Fensterwechsel verworfen.
+- Verschieben wird zuverlässig beendet, wenn ein echter Zauber, eine Kanalisierung oder Kampf die Vorschau unterbricht. Verspätete Zieh-Ereignisse speichern keine ungewollte Position mehr.
+- Optionale Klassenakzente wirken nun auf Nebenlichter. Hauptgrafik und neutrale Darstellung bleiben erhalten.
+- Zeitweise nicht verfügbare Zaubersymbole können sich bei Spieler-, Ziel- und Fokusleisten mit begrenzten Wiederholungen erholen.
+- Überflüssige Sichtbarkeitsaufrufe für abgeschaltete Zusatzelemente der Spielerleiste reduziert.
+
+**Update:** SavedVariables behalten. Bestehende Profile, Einstellungen und HANSECAST:1-Exporte bleiben kompatibel. Keine zusätzlichen Addons erforderlich; Hanse Cast Check ist nicht enthalten.
+
+**Bekannte Grenzen:** Zugängliche Zauberdaten sind erforderlich; vollständig geschützte Dauerobjekte und Empower-Zauber werden nicht unterstützt. Kanal-Hilfslinien sind manuelle Markierungen. Die Menüvorschau zeigt die verkleinerte Grafik, nicht jede Text-/Symboloption exakt. Lokale automatische Tests decken nicht jede Kombination aus Spielclient, Zauber und weiteren Addons ab. Andere WoW-Ausgaben werden von diesem Paket nicht unterstützt.
+
+---
+
+# 0.10.1 — Compact native-style settings (beta)
+
+- Four compact horizontal tabs: Player, Target & focus, Profiles and Help.
+- Native red action buttons, gold labels, compact selection controls and hover explanations.
+- Frequent player settings on one page; additional controls expand on demand.
+- Independent animated menu preview uses the original artwork and shared renderer; no live-bar repositioning or synthetic gameplay events.
+- Quick profile selector; existing profile data and import/export formats retained.
+- Preview animation stops when hidden, on other tabs and in combat.
+
+# 0.10.0 — Settings redesign (beta)
+
+- Full settings canvas inside WoW Settings → AddOns, with seven pages and German/English explanations.
+- Direct selection lists, checkboxes, sliders and validated numeric fields.
+- Shared state across native settings and fallback window; existing profiles and HANSECAST:1 exports retained.
+- Named confirmation dialogs and atomic import as a new profile.
+- Player/target/focus positioning toolbar with explicit return and combat cleanup.
+- Existing 0.9.1 SavedVariables remain compatible. Do not delete saved settings.
+
 # Hanse Cast 0.9.1 · Beta
 
 ## English

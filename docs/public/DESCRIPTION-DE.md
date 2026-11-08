@@ -22,9 +22,12 @@ Die Grafik behält ihre Form und wird mit dem Zauberfortschritt freigelegt. Posi
 ## Erste Schritte
 
 1. Hanse Cast installieren und WoW vollständig neu starten.
-2. Mit `/hansecast` die Einstellungen öffnen.
-3. Vorschau einschalten, Leiste verschieben und Größe anpassen. Anschließend sperren und die Vorschau ausschalten.
-4. Optik wählen. Ziel- und Fokusleisten bei Bedarf in den erweiterten Einstellungen aktivieren; beide sind zunächst ausgeschaltet.
+2. **Optionen/Einstellungen → AddOns → Hanse Cast** öffnen oder `/hansecast` eingeben.
+3. Im Reiter **Spieler** die Optik und Größe wählen. **Weitere Einstellungen** öffnet Schrift, Symbole und Feineinstellungen. Erklärungen erscheinen beim Darüberfahren mit der Maus.
+4. **Positionieren** wählen, die Leiste verschieben und mit **Fertig – zurück zu Einstellungen** sperren und zurückkehren.
+5. Ziel- und Fokusleisten bei Bedarf im Reiter **Ziel & Fokus** aktivieren; beide sind zunächst ausgeschaltet.
+
+Das kompakte Menü hat vier Reiter: **Spieler**, **Ziel & Fokus**, **Profile** und **Hilfe**. Die animierte Menüvorschau verwendet die Originalgrafiken und dieselbe Zeichenfunktion wie die Castbar. Sie zeigt die manuell gewählte Optik, nicht sämtliche Text- und Symboloptionen in Originalgröße. Änderungen gelten sofort für das aktive Profil; im Kampf sind Änderungen gesperrt.
 
 Bei manueller Installation den Ordner `HanseCast` nach `Interface/AddOns` entpacken. Die Datei muss unter `Interface/AddOns/HanseCast/HanseCast.toc` liegen.
 
@@ -33,11 +36,11 @@ Bei manueller Installation den Ordner `HanseCast` nach `Interface/AddOns` entpac
 - `/hansecast units` – Ziel- und Fokusvorschau ein- oder ausschalten.
 - `/hansecast status` – Version und Diagnoseinformationen anzeigen.
 
-## Kompatibilität und Betastand
+## Kompatibilität und Prüfstand
 
-**Version 0.9.1 ist eine Beta für WoW Forever 1.60.1, Interface 16001.** Andere WoW-Ausgaben werden von diesem Paket derzeit nicht unterstützt.
+**Version 1.0.0 ist für WoW Forever 1.60.1, Interface 16001 vorgesehen.** Andere WoW-Ausgaben werden von diesem Paket derzeit nicht unterstützt.
 
-Die Spielerleiste wurde im echten Spiel eingesetzt. Erste Leistungsvergleiche auf dem Test-PC des Autors und das Speichern der geprüften Einstellungen nach Reload und Neustart wurden überprüft. Weitere Klassen, Optiken sowie Ziel-/Fokusfunktionen sind Teil der Betaprüfung. Eine bestimmte Leistung auf jedem Rechner wird nicht zugesichert.
+Lokale Tests mit simulierten Spielschnittstellen prüfen Zauberereignisse, Einstellungen, Profile, Grafikdarstellung und das Wiederherstellen verfügbarer Ressourcen. Frühere Versionen wurden im echten Spiel genutzt, einschließlich Bildzeitvergleichen und Speicherprüfungen nach Reload und Neustart. Damit ist nicht jede Klasse, jeder Zauber, jede Anzeigeskalierung oder Addonkombination in Version 1.0.0 geprüft. Eine bestimmte Leistung auf jedem Rechner wird nicht zugesichert.
 
 Hanse Cast verwendet zugängliche Zauberinformationen. Fehlen erforderliche Daten oder sind sie geschützt, wird die betroffene eigene Anzeige ausgeblendet. Vollständig geschützte Dauerobjekte werden nicht direkt dargestellt. Empower-Zauber werden nicht unterstützt. Kanal-Hilfslinien sind manuelle Markierungen und keine automatisch erkannten Schadens- oder Heilticks. Die Latenzmarkierung zeigt die gemeldete Netzwerklatenz und kein exaktes Eingabe- oder Zauberwarteschlangenfenster.
 

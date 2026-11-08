@@ -203,6 +203,7 @@ local function SelectClassMaterial(e,theme)
     e.tipGlow:SetVertexColor(unpack(theme.cast));e.tipCore:SetVertexColor(unpack(theme.bright))
 end
 local function SelectStaticMaterial(e,theme)
+    local accent=theme.accentTint or {1,1,1,1}
     local suffix=e.mageFireCompact and "-small" or ""
     local folder=theme.classMaterial and CLASS_STATIC_ART or STATIC_ART
     local path=folder..theme.family.."-"..theme.element
@@ -214,7 +215,7 @@ local function SelectStaticMaterial(e,theme)
     SetAsset(e.materialGlow,path..suffix.."-glow.tga","CLAMP","CLAMP","LINEAR")
     SetAsset(e.ghost,path..".tga","CLAMP","CLAMP","LINEAR")
     e.body:SetVertexColor(1,1,1,1);Alpha(e.body,1)
-    e.materialGlow:SetVertexColor(1,1,1,1);Alpha(e.materialGlow,.30)
+    e.materialGlow:SetVertexColor(unpack(accent));Alpha(e.materialGlow,.30)
     e.ghost:SetTexCoord(0,1,0,1);e.ghost:SetVertexColor(1,1,1,.025)
     Rect(e.body,e.canvas,0,0,e.width,e.height)
     Rect(e.materialGlow,e.canvas,0,0,e.width,e.height)
@@ -222,7 +223,7 @@ local function SelectStaticMaterial(e,theme)
     e.body:SetTexCoord(0,1,0,1);e.materialGlow:SetTexCoord(0,1,0,1)
     SetAsset(e.staticLight,path..suffix.."-glow.tga","CLAMP","CLAMP","LINEAR")
     SetAsset(e.staticLightMask,STATIC_ART.."LightSweep.tga","CLAMPTOBLACKADDITIVE","CLAMPTOBLACKADDITIVE","LINEAR")
-    e.staticLight:SetTexCoord(0,1,0,1);e.staticLight:SetVertexColor(1,1,1,1);Alpha(e.staticLight,.05)
+    e.staticLight:SetTexCoord(0,1,0,1);e.staticLight:SetVertexColor(unpack(accent));Alpha(e.staticLight,.05)
     Rect(e.staticLight,e.canvas,0,0,e.width,e.height)
     Visible(e.staticLight,false)
     e.mageFireFrame=0;e.mageFirePage=0

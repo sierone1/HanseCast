@@ -21,7 +21,11 @@ Choose from **145 visual variants**: 27 class-inspired styles and two faction-in
 
 ## Getting started
 
-Install the addon and fully restart WoW. Type `/hansecast` to open its settings. Enable the preview, drag the bar into place and lock it again. Target and focus bars are disabled initially and can be enabled in the advanced settings.
+Install the addon and fully restart WoW. Open **Settings → AddOns → Hanse Cast**, or type `/hansecast`.
+
+The compact menu has four tabs: **Player**, **Target & focus**, **Profiles**, and **Help**. Frequently used settings are visible immediately; expand **More settings** for text, icons and fine adjustments. Hover over a setting for an explanation. The animated menu sample uses the addon's original textures and renderer; it shows the manual artwork selection, not every text/icon setting at full scale.
+
+Use **Position** to place a bar in the game world, then **Done – back to settings** to lock it and return. Target and focus bars are disabled initially; enable them in **Target & focus**. Changes apply immediately to the active profile. Settings changes are locked during combat.
 
 - `/hansecast` - Open settings.
 - `/hansecast test` - Toggle the player-bar preview.
@@ -32,9 +36,9 @@ For manual installation, extract the `HanseCast` folder into `Interface/AddOns`.
 
 ## Compatibility and limits
 
-**Version 0.9.1 is a beta build for WoW Forever 1.60.1, interface 16001.** Other WoW editions are not currently supported by this package.
+**Version 1.0.0 targets WoW Forever 1.60.1, interface 16001.** Other WoW editions are not currently supported by this package.
 
-The player bar has been used in real gameplay. Initial performance comparisons on the author's test PC and persistence of the tested settings after reload and restart have been checked. Broader class, style and target/focus coverage remains part of beta testing. Performance on every system is not guaranteed.
+Local simulated-client tests cover cast events, settings, profiles, artwork rendering and resource recovery. Earlier versions were used in live gameplay, including frame-time comparisons and reload/restart persistence checks. These checks do not cover every class, spell, display scale or addon combination in version 1.0.0. Performance on every system is not guaranteed.
 
 Hanse Cast uses accessible game data. If required cast information is restricted or unavailable, the affected custom display is hidden. Fully restricted duration objects are not displayed directly. Channel guide lines are manual markers, not detected damage or healing ticks. Empower casts are not supported in this build. The latency marker indicates reported network latency, not an exact input or spell-queue window.
 

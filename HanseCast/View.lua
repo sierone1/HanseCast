@@ -41,6 +41,15 @@ local function TimeInset(frame,value)
     end
 end
 
+-- Cancel an unfinished move without committing a partial position. A later
+-- native OnDragStop must not overwrite the saved position after preview exit.
+function HC.CancelPreviewDrag()
+    local moving=HC.dragging
+    HC.dragging=false
+    if HC.frame then HC.frame:StopMovingOrSizing() end
+    if moving and HC.frame and HC.db then HC.ApplyLayout() end
+end
+
 function HC.CreateView()
     local f=CreateFrame("Frame","HanseCastPlayer",UIParent)
     HC.frame=f
@@ -108,7 +117,9 @@ function HC.CreateView()
         if HC.preview and not InCombatLockdown() then HC.dragging=true;self:StartMoving() end
     end)
     f:SetScript("OnDragStop",function(self)
+        local commit=HC.dragging and HC.preview and not InCombatLockdown()
         HC.dragging=false;self:StopMovingOrSizing()
+        if not commit then return end
         local x,y=self:GetCenter()
         local ratio=self:GetEffectiveScale()/UIParent:GetEffectiveScale()
         HC.db.x=x*ratio-UIParent:GetWidth()/2;HC.db.y=y*ratio-UIParent:GetHeight()/2

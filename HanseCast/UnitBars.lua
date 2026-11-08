@@ -63,9 +63,21 @@ local function paint(s,now)
     else
         s.interrupt:SetText(L("Unterbrechbarkeit unbekannt"));s.interrupt:SetTextColor(.75,.75,.80,1)
     end
-    if s.config.showIcon then
-        if s.iconValue~=c.icon then s.icon:SetTexture(c.icon);s.iconValue=c.icon end
-        s.icon:Show()
+    if s.config.showIcon and HC.Accessible(c.icon) and (type(c.icon)=="number" or type(c.icon)=="string") then
+        local id=HC.Accessible(c.id) and c.id or nil
+        if type(id)~="number" and type(id)~="string" then id=nil end
+        local newCast=s.iconGeneration~=s.generation
+        if id~=nil then newCast=newCast or id~=s.iconCastID
+        else newCast=newCast or c.start~=s.iconCastStart or c.channel~=s.iconCastChannel end
+        -- Cache success, but allow an optional resource that explicitly failed
+        -- to recover on a new cast/unit or once per second during the same cast.
+        if s.iconValue~=c.icon or (not s.iconLoaded and (newCast or not s.iconRetryAt
+            or now>=s.iconRetryAt or now<(s.iconAttemptAt or now))) then
+            s.iconValue=c.icon;s.iconLoaded=s.icon:SetTexture(c.icon)~=false
+            s.iconCastID=id;s.iconCastStart=c.start;s.iconCastChannel=c.channel;s.iconGeneration=s.generation
+            s.iconAttemptAt=now;s.iconRetryAt=now+1
+        end
+        if s.iconLoaded then s.icon:Show() else s.icon:Hide() end
     else s.icon:Hide() end
     s.frame:Show()
 end
@@ -112,7 +124,7 @@ local function tick()
     local now=GetTime();local active=false
     for _,unit in ipairs(units) do
         local s=HC.unitBars[unit]
-        if HC.unitBarsPreview then
+        if HC.unitBarsPreview and (not HC.unitBarsPreviewUnit or HC.unitBarsPreviewUnit==unit) then
             local elapsed=(now-HC.unitBarsPreviewStart)%6
             local channel=elapsed>=3
             local start=now-elapsed%3
@@ -189,11 +201,13 @@ function HC.RefreshUnitBars()
     end
     wake()
 end
-function HC.PreviewUnitBars(enabled)
+function HC.PreviewUnitBars(enabled,unit)
     if not HC.unitBars or InCombatLockdown() then return false end
     HC.unitBarsPreview=enabled==true;HC.unitBarsPreviewStart=GetTime()
+    HC.unitBarsPreviewUnit=HC.unitBarsPreview and (unit=='target' or unit=='focus') and unit or nil
     for _,unit in ipairs(units) do
-        local s=HC.unitBars[unit];s.frame:EnableMouse(HC.unitBarsPreview)
+        local s=HC.unitBars[unit];s.frame:EnableMouse(HC.unitBarsPreview and (not HC.unitBarsPreviewUnit or HC.unitBarsPreviewUnit==unit))
+        if not HC.unitBarsPreview then s.dragging=false;s.frame:StopMovingOrSizing() end
         reset(s)
         if not HC.unitBarsPreview then refresh(s) end
     end
@@ -225,7 +239,7 @@ function HC.InitializeUnitBars()
             pending={};HC.RefreshUnitBars();return
         elseif event=="PLAYER_REGEN_DISABLED" then
             if HC.unitBarsPreview then
-                HC.unitBarsPreview=false
+                HC.unitBarsPreview=false;HC.unitBarsPreviewUnit=nil
                 for _,u in ipairs(units) do local s=HC.unitBars[u];s.dragging=false;s.frame:StopMovingOrSizing();s.frame:EnableMouse(false);reset(s) end
             end
             HC.RefreshUnitBars();return

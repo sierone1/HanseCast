@@ -45,6 +45,13 @@ local function Name(name)
  return type(name)=='string' and #name>0 and #name<=48 and not name:find('[%c|=\\]') and name:find('%S')~=nil
 end
 local function Allowed() return not (type(InCombatLockdown)=='function' and InCombatLockdown()) end
+HC.ValidProfileValue=Valid
+function HC.CheckNewProfileName(name)
+ if not Name(name) then return false,'invalidName' end
+ if HC.db.profiles[name] then return false,'duplicate' end
+ if #HC.ProfileNames()>=12 then return false,'limit' end
+ return true
+end
 local function Refresh()
  if HC.frame and HC.ApplyLayout then HC.ApplyLayout() end
  if HC.UpdateBlizzard then HC.UpdateBlizzard() end
@@ -84,6 +91,9 @@ function HC.ProfileNames()
  local names={};for name in pairs(HC.db.profiles or {}) do names[#names+1]=name end;table.sort(names);return names
 end
 local function Apply(snapshot)
+ -- Runtime-only revision invalidates unfinished edits even when a reset/import
+ -- replaces the current profile without changing its name. Never persisted.
+ HC.profileRevision=(HC.profileRevision or 0)+1
  for key,value in pairs(Snapshot(snapshot)) do
   local unit,field=key:match('^unitBars%.(%w+)%.(%w+)$')
   if unit then HC.db.unitBars=HC.db.unitBars or {};HC.db.unitBars[unit]=HC.db.unitBars[unit] or {};HC.db.unitBars[unit][field]=value
@@ -93,7 +103,7 @@ local function Apply(snapshot)
 end
 function HC.CreateProfile(name,copyCurrent)
  if not Allowed() then return false,'combat' end
- if not Name(name) or HC.db.profiles[name] or #HC.ProfileNames()>=12 then return false,'name' end
+ local ok,reason=HC.CheckNewProfileName(name);if not ok then return false,reason end
  HC.SaveActiveProfile();HC.db.profiles[name]=Snapshot(copyCurrent and HC.db or nil)
  HC.db.activeProfile=name;Apply(HC.db.profiles[name]);return true
 end
@@ -147,8 +157,24 @@ function HC.StageProfileImport(text)
  local snapshot,reason=HC.ParseProfile(text);HC.pendingProfileImport=snapshot
  return snapshot~=nil,reason
 end
-function HC.ApplyProfileImport()
+local function ImportSnapshot(text)
+ -- UI callers pass their exact checked text. Legacy callers may still stage
+ -- globally and apply with no argument; the two paths never share a payload.
+ if text~=nil then return HC.ParseProfile(text) end
+ if not HC.pendingProfileImport then return nil,'empty' end
+ return Snapshot(HC.pendingProfileImport)
+end
+function HC.ApplyProfileImport(text)
  if not Allowed() then return false,'combat' end
- if not HC.pendingProfileImport then return false,'empty' end
- local snapshot=HC.pendingProfileImport;HC.pendingProfileImport=nil;Apply(snapshot);return true
+ local snapshot,reason=ImportSnapshot(text);if not snapshot then return false,reason end
+ HC.pendingProfileImport=nil;Apply(snapshot);return true
+end
+function HC.ImportAsNewProfile(name,text)
+ if not Allowed() then return false,'combat' end
+ local snapshot,reason=ImportSnapshot(text);if not snapshot then return false,reason end
+ local ok,reason=HC.CheckNewProfileName(name);if not ok then return false,reason end
+ HC.SaveActiveProfile()
+ HC.db.profiles[name]=snapshot;HC.db.activeProfile=name
+ HC.pendingProfileImport=nil;Apply(snapshot)
+ return true
 end

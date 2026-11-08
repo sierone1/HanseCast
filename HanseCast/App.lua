@@ -138,7 +138,7 @@ function HC.TogglePreview(mode)
     HC.preview=not HC.preview
     HC.previewMode=HC.preview and mode or nil
     HC.feedbackPreviewKey=nil
-    HC.cast=nil; HC.gcd=nil; HC.ClearCastResult(); HC.lastEnded=nil; HC.dragging=false
+    HC.cast=nil; HC.gcd=nil; HC.ClearCastResult(); HC.lastEnded=nil; HC.CancelPreviewDrag()
     HC.UpdateSpellTheme(nil)
     HC.HideFinishCue()
     HC.UpdateBlizzard()
@@ -234,7 +234,7 @@ events:SetScript("OnEvent",function(_, event, ...)
     end
     if event=="PLAYER_REGEN_DISABLED" then
         if HC.preview then HC.ClearCastResult() end
-        HC.preview=false; HC.dragging=false; HC.frame:StopMovingOrSizing(); HC.frame:EnableMouse(false)
+        HC.preview=false; HC.previewMode=nil; HC.CancelPreviewDrag(); HC.frame:EnableMouse(false)
         HC.frame.hint:Hide(); HC.HideFinishCue()
         if HC.options then HC.options:Hide() end
         if HC.advanced then HC.advanced:Hide() end
@@ -249,7 +249,7 @@ events:SetScript("OnEvent",function(_, event, ...)
     end
     -- Registered for player only. Never inspect unit/castGUID/spellID payloads.
     if HC.preview then
-        HC.preview=false; HC.frame:EnableMouse(false); HC.frame.hint:Hide()
+        HC.preview=false; HC.previewMode=nil; HC.CancelPreviewDrag(); HC.frame:EnableMouse(false); HC.frame.hint:Hide()
         HC.ClearCastResult();HC.HideEffects();HC.frame:Hide()
         if HC.UpdateOptions then HC.UpdateOptions() end
     end
