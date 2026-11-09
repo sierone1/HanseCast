@@ -37,7 +37,7 @@ local classPalettes={
     {"warlock_demonology","Dämonologie",{.30,.83,.24,1},{.78,1,.46,1}},
     {"warlock_destruction","Zerstörung",{.95,.23,.08,1},{1,.65,.25,1}},
     {"priest_holy","Heilig",{1,.76,.29,1},{1,.96,.76,1}},
-    {"priest_discipline","Disziplin",{.65,.81,.98,1},{.97,.96,.85,1}},
+    {"priest_discipline","Disziplin",{.78,.62,.72,1},{1,.91,.73,1}},
     {"priest_shadow","Schatten",{.56,.23,.83,1},{.84,.59,1,1}},
     {"druid_balance","Gleichgewicht",{.91,.67,.33,1},{.87,.83,1,1}},
     {"druid_restoration","Wiederherstellung",{.32,.77,.38,1},{.80,.98,.61,1}},
@@ -133,6 +133,10 @@ function HC.ApplyTheme()
         HC.gcdFrame.bar:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
         HC.gcdFrame.bar:SetStatusBarColor(unpack(HC.activeTheme.gcd))
         HC.gcdFrame.bar:SetAlpha(0.6)
+        if HC.gcdFrame.nativeBar then
+            HC.gcdFrame.nativeBar:SetStatusBarColor(unpack(HC.activeTheme.gcd))
+            HC.gcdFrame.nativeBar:SetAlpha(0.6)
+        end
     end
     -- No fill rectangles, background panels or enclosing frame are created here.
 end

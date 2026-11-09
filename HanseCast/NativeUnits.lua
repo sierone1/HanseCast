@@ -59,6 +59,12 @@ function HC.UnitReason(reason) return L(reasons[reason] or reason or 'unbekannt'
 function HC.PrintUnitStatus()
     HC.Print(L('Spieler')..': '..HC.UnitReason(HC.lastReason)..' | '..L('sichtbar')..': '..L(HC.frame:IsShown() and 'ja' or 'nein')..
         ' | '..L('geschützte Abfragen')..': '..HC.stats.restricted..' | '..L('API-Fehler')..': '..HC.stats.apiErrors)
+    if HC.compact then
+        HC.Print('Ziel & Fokus: kompakt | '..HC.compact.mode..' | '..HC.compact.style)
+        HC.Print('Kompakt-Start: '..(HC.compactInitStatus or 'unknown')..' | Fehler: '..(HC.compactInitError and 'ja' or 'nein'))
+        for _,row in ipairs(HC.compact.rows) do HC.Print(row.unit..': '..(row.reason or 'unknown')) end
+        return
+    end
     if HC.unitBarsInDevelopment then HC.Print(L('Ziel & Fokus: in Arbeit – deaktiviert'));return end
     for _,unit in ipairs({'target','focus'}) do
         local s=HC.unitBars and HC.unitBars[unit]

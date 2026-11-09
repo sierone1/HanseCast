@@ -88,18 +88,18 @@ function HC.Tick()
         HC.UpdateSpellTheme(nil)
         HC.HideEffects();HC.frame:Hide()
     end
-    if HC.gcd and now >= HC.gcd.finish then HC.gcd=nil; HC.gcdReason="idle" end
+    if HC.gcd and not HC.gcd.native and now >= HC.gcd.finish then HC.gcd=nil; HC.gcdReason="idle" end
     HC.DrawGCD(HC.gcd,now)
-    if not HC.cast and not HC.gcd and not HC.resultUntil then driver:SetScript("OnUpdate",nil) end
+    if not HC.cast and (not HC.gcd or HC.gcd.native) and not HC.resultUntil then driver:SetScript("OnUpdate",nil) end
 end
 function HC.RefreshGCD()
     if not HC.ready or HC.preview then return end
     if HC.db.gcd then HC.gcd,HC.gcdReason=HC.ReadGCD()
     else HC.gcd=nil; HC.gcdReason="disabled" end
     HC.DrawGCD(HC.gcd,GetTime())
-    if HC.gcd then Wake() end
+    if HC.gcd and not HC.gcd.native then Wake() end
 end
-function HC.Refresh(event)
+function HC.Refresh(event, startedID)
     if not HC.ready or HC.preview then return end
     local cast, reason=HC.CastState.Read(HC,"player",GetTime())
     HC.lastReason=reason
@@ -110,7 +110,7 @@ function HC.Refresh(event)
     -- The unit query may turn idle before its terminal event is dispatched
     -- (for example an interrupt aura update). Retain identity briefly, without
     -- treating missing/restricted/error data as proof that the cast ended.
-    if previous and not cast and reason=="idle" then
+    if previous and not cast and reason=="idle" and (startedID==nil or HC.Matches(previous,startedID)) then
         HC.RememberTerminal(previous,GetTime(),false)
     end
     HC.cast=cast
@@ -125,7 +125,7 @@ function HC.Refresh(event)
     elseif not HC.resultUntil then HC.UpdateSpellTheme(nil);HC.HideEffects();HC.frame:Hide() end
     HC.UpdateBlizzard()
     HC.RefreshGCD()
-    if cast or HC.gcd or HC.resultUntil then Wake() else driver:SetScript("OnUpdate",nil) end
+    if cast or (HC.gcd and not HC.gcd.native) or HC.resultUntil then Wake() else driver:SetScript("OnUpdate",nil) end
 end
 function HC.TogglePreview(mode)
     if InCombatLockdown() then HC.Print(HC.L("Vorschau nur außerhalb des Kampfes.")); return end
@@ -176,6 +176,22 @@ local function Status()
     local quartz=C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("Quartz")
     if quartz then HC.Print(L("Quartz ist aktiv. Für den Einzeltest bitte vorübergehend deaktivieren.")) end
 end
+-- Optional units must never prevent player events, slash commands or diagnostics.
+function HC.StartCompactSafely()
+    if not HC.InitializeCompactUnits then return false end
+    local ok,result,reason=pcall(HC.InitializeCompactUnits)
+    if not ok then
+        HC.compactInitStatus='error';HC.compactInitError=true
+        if HC.compact then
+            if HC.compact.SetMode then pcall(HC.compact.SetMode,'off') end
+            if HC.compact.lifecycle then pcall(HC.compact.lifecycle.UnregisterAllEvents,HC.compact.lifecycle) end
+        end
+        return false
+    end
+    HC.compactInitError=false
+    HC.compactInitStatus=result and 'ready' or reason=='combat' and 'deferred' or 'unavailable'
+    return result
+end
 local function Start()
     if HC.ready then return end
     HC.db=HC.LoadSettings(HanseCastDB)
@@ -194,24 +210,35 @@ local function Start()
     HC.Register(events,"DISPLAY_SIZE_CHANGED")
     HC.Register(events,"UNIT_AURA","player")
     SLASH_HANSECAST1="/hansecast"
+    SLASH_HANSECASTCOMPACT1='/hccompact'
+    SlashCmdList.HANSECASTCOMPACT=function() HC.OpenCompactOptions() end
     SlashCmdList.HANSECAST=function(input)
         local command=input:lower():match("^%s*(%S*)")
         if command=="status" then Status()
+        elseif command=="bericht" or command=="report" then HC.ShowDiagnosticReport()
+        elseif command=="aufzeichnen" or command=="trace" then
+            HC.SetDiagnosticTrace(not HC.IsDiagnosticTraceEnabled())
+            HC.Print(L(HC.IsDiagnosticTraceEnabled() and 'Aufzeichnung gestartet. Nach dem Fehler /hansecast bericht öffnen.'
+                or 'Aufzeichnung gestoppt. /hansecast bericht zeigt das Ergebnis.'))
         elseif command=="diagnose" then
             HC.Print("Version "..HC.version)
             HC.PrintUnitStatus()
             if HC.GetComfortDiagnostic then HC.Print(HC.GetComfortDiagnostic()) end
+            HC.Print('GCD: '..(HC.gcdReason or 'unknown')..' | '..HC.GetGCDDiagnostic())
+            HC.Print(HC.GetGCDPathDiagnostic())
             HC.Print(L("Blizzard-Ziel: ")..L(HC.blizzardTargetStatus or "unverändert"))
             HC.Print(L("Blizzard-Fokus: ")..L(HC.blizzardFocusStatus or "unverändert"))
         elseif command=="test" then HC.TogglePreview()
         elseif command=="demo" then HC.TogglePreview("feedback")
         elseif command=="units" and HC.PreviewUnitBars then
-            if HC.unitBarsInDevelopment then HC.Print(L("Ziel & Fokus: in Arbeit – deaktiviert"))
+            if HC.compact then HC.PreviewCompactUnits(HC.compact.mode~='preview')
+            elseif HC.unitBarsInDevelopment then HC.Print(L("Ziel & Fokus: in Arbeit – deaktiviert"))
             else HC.PreviewUnitBars(not HC.unitBarsPreview) end
         else HC.ToggleOptions() end
     end
     HC.Print(HC.version..HC.L(" geladen. /hansecast öffnet die Einstellungen."))
     HC.Refresh()
+    HC.StartCompactSafely()
 end
 events:SetScript("OnEvent",function(_, event, ...)
     if event=="ADDON_LOADED" then
@@ -225,6 +252,8 @@ events:SetScript("OnEvent",function(_, event, ...)
     end
     if event=="PLAYER_LOGIN" then Start(); return end
     if not HC.ready then return end
+    -- A single opt-in record, without reading any event arguments.
+    HC.RecordDiagnosticEvent(event)
     if event=="PLAYER_LOGOUT" then
         if HC.SaveActiveProfile then HC.SaveActiveProfile() end
         return
@@ -244,6 +273,7 @@ events:SetScript("OnEvent",function(_, event, ...)
         end
     end
     if event=="PLAYER_REGEN_DISABLED" then
+        HC.HideDiagnosticReport()
         if HC.preview then HC.ClearCastResult() end
         HC.preview=false; HC.previewMode=nil; HC.CancelPreviewDrag(); HC.frame:EnableMouse(false)
         HC.frame.hint:Hide(); HC.HideFinishCue()
@@ -269,6 +299,13 @@ events:SetScript("OnEvent",function(_, event, ...)
         if HC.UpdateOptions then HC.UpdateOptions() end
     end
     local id=HC.CastState.EventID(event,...)
+    if (event=="UNIT_SPELLCAST_START" or event=="UNIT_SPELLCAST_CHANNEL_START") and id~=nil then
+        -- A safe new event identity owns feedback even when its times are
+        -- restricted and Blizzard must render it. Do not let an older idle
+        -- record or its queued cancellation label the new cast as failed.
+        if HC.lastEnded and not HC.Matches(HC.lastEnded,id) then HC.lastEnded=nil end
+        if not HC.Matches(HC.cast,id) then HC.ClearCastResult();HC.HideFinishCue() end
+    end
     if event=="UNIT_SPELLCAST_SUCCEEDED" then
         local completed=HC.cast
         if not HC.Matches(completed,id) then
@@ -314,7 +351,8 @@ events:SetScript("OnEvent",function(_, event, ...)
         end
         HC.CastState.Reconcile(HC,HC.Refresh)
     else
-        HC.Refresh(event); QueueGCDRefresh(false)
+        local started=(event=="UNIT_SPELLCAST_START" or event=="UNIT_SPELLCAST_CHANNEL_START") and id or nil
+        HC.Refresh(event,started); QueueGCDRefresh(false)
     end
 end)
 HC.Register(events,"ADDON_LOADED")

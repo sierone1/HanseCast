@@ -1,27 +1,9 @@
-Hanse Cast 1.0.5
-WoW Forever 1.60.1 / Interface 16001
-
-DEUTSCH
-Nach dem Update von 1.0.4 oder aelter WoW vollstaendig neu starten.
-/hansecast: Einstellungen. /hansecast diagnose: kompakte Diagnose.
-Neu: Favoriten/Filter, Komfort-Vorlagen, ruhiger Modus, verbesserte Vorschau,
-optionale Start-Schaetzung und getrennte Warteschlangenanzeige.
-Start-Schaetzung ist keine exakte Serverlatenz; fehlende sichere Daten
-werden nicht ersetzt. Warteschlangen-Einstellung wird nur gelesen.
-Kanal-Hilfslinien bleiben manuell. Ziel/Fokus: IN ARBEIT und deaktiviert.
-Blizzard zeigt Ziel/Fokus normal an. SavedVariables nicht loeschen.
-Keine zusaetzlichen Addons erforderlich. Experimentelle Hilfsaddons fehlen.
-Der Nutzer bestaetigte den gebuendelten Spieltest des funktionsgleichen
-alpha.3-Kandidaten; keine Vollpruefung aller Klassen/Addonkombinationen.
-
-ENGLISH
-Fully restart WoW after updating from 1.0.4 or earlier.
-/hansecast: settings. /hansecast diagnose: compact diagnostics.
-New: favourites/filters, comfort presets, reduced motion, improved preview,
-optional start estimate and separate read-only queue indicator.
-The start estimate is not exact server latency. Missing safe data is not
-guessed. Channel guides remain manual. Target/focus IN DEVELOPMENT,
-disabled in menu and runtime. Blizzard target/focus bars remain available.
-Do not delete SavedVariables. No dependencies or experimental helpers.
-The user confirmed the bundled gameplay check of the functionally identical
-alpha.3 candidate; this is not exhaustive class/addon compatibility testing.
+Hanse Cast 1.0.6
+WoW Forever 1.60.1 / Interface 16001; compact target/focus require build 70862.
+Extract HanseCast into Interface/AddOns and fully restart WoW. Saved settings are preserved.
+/hansecast opens settings; /hccompact opens target/focus settings.
+/hansecast report opens diagnostics. Disable the obsolete Compact Lab if installed.
+Optional time: Off, Inside right, Outside right. A dash means data unavailable.
+No automatic channel tick detection, Retail or empowered spell support.
+Source and help: https://github.com/sierone1/HanseCast
+All Rights Reserved. See LICENSE.txt and CREDITS.txt.

@@ -1,5 +1,5 @@
 local _, HC = ...
-HC.version = "1.0.5"
+HC.version = "1.0.6"
 -- Release gate, deliberately not a saved setting or profile option.
 HC.unitBarsInDevelopment = true
 HC.defaults = { schema = 3, x = 0, y = -180, width = 300, height = 32, scale = 1,
@@ -43,6 +43,7 @@ function HC.LoadSettings(saved)
     db.launches = HC.ValidNumber(saved.launches, 0, 1000000) and saved.launches or 0
     if HC.LoadUnitBarSettings then db.unitBars=HC.LoadUnitBarSettings(saved.unitBars) end
     if HC.LoadExtendedSettings then HC.LoadExtendedSettings(db,saved) end
+    if HC.LoadCompactSettings then HC.LoadCompactSettings(db,saved) end
     return db
 end
 

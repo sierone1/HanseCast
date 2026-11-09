@@ -22,6 +22,8 @@ local updating=false
 local function Allowed() return not InCombatLockdown() end
 local function ClosePopup(h) if h.popup then h.popup:Hide() end end
 local messages={
+ ['font-fit']=S('Nicht übernommen: Die Höhe muss mindestens Schriftgröße + 4 betragen.','Not saved: height must be at least font size + 4.'),
+ color=S('Nicht übernommen: Bitte sechs Farbzeichen eingeben, zum Beispiel 3DABE6.','Not saved: enter six colour digits, for example 3DABE6.'),
  combat=S('Im Kampf sind Änderungen gesperrt.','Changes are locked during combat.'),
  invalidName=S('Name: 1–48 Bytes, nicht leer; keine Steuerzeichen oder | = \\.','Name: 1–48 bytes, not blank; no control characters or | = \\.'),
  duplicate=S('Dieser Profilname ist bereits vergeben.','This profile name is already in use.'),
@@ -29,12 +31,41 @@ local messages={
  last=S('Das letzte Profil kann nicht gelöscht werden.','The last profile cannot be deleted.'),
  empty=S('Bitte zuerst den Importtext prüfen.','Check the import text first.'),
  name=S('Das ausgewählte Profil existiert nicht mehr.','The selected profile no longer exists.'),
+ size=S('Der Profiltext ist zu lang oder beschädigt. Bitte den vollständigen Export erneut einfügen.','The profile text is too long or damaged. Paste the complete export again.'),
+ version=S('Kein unterstützter Hanse-Cast-Export. Der Text muss mit HANSECAST:1 beginnen.','Not a supported Hanse Cast export. The text must start with HANSECAST:1.'),
+ key=S('Der Export enthält unbekannte oder doppelte Einstellungen. Bitte unveränderten Export verwenden.','The export contains unknown or duplicate settings. Use an unchanged export.'),
+ type=S('Eine Ein-/Aus-Einstellung ist ungültig. Bitte den Originalexport verwenden.','An on/off setting is invalid. Use the original export.'),
+ number=S('Eine Zahl im Export ist ungültig. Bitte den Originalexport verwenden.','A number in the export is invalid. Use the original export.'),
+ value=S('Eine Einstellung liegt außerhalb des erlaubten Bereichs. Es wurde nichts geändert.','A setting is outside its allowed range. Nothing was changed.'),
+ stale=S('Die Einstellungen haben sich inzwischen geändert. Bitte die Aktion erneut prüfen.','Settings have changed since review. Review the action again.'),
+ favoriteLimit=S('Alle 20 Favoritenplätze sind belegt. Entferne zuerst einen Favoriten.','All 20 favourite slots are used. Remove a favourite first.'),
 }
 local function Status(h,message) h.message=message;HC.UpdateOptions() end
-local function Result(h,ok,reason)
- Status(h,ok and S('Erledigt.','Done.') or messages[reason] or S('Ungültige Daten. Keine Änderung.','Invalid data. Nothing changed.'))
+local function Result(h,ok,reason,title,value)
+ local message
+ if ok then
+  if title then
+   if type(value)=='boolean' then value=T(value and S('an','on') or S('aus','off')) end
+   message=T(title)..T(S(' gespeichert: ',' saved: '))..tostring(value or '')
+  else message=S('Änderung gespeichert.','Change saved.') end
+ else message=(title and T(title)..': ' or '')..T(messages[reason] or S('Wert nicht übernommen. Bitte Eingabe prüfen.','Value not saved. Check your input.')) end
+ Status(h,message)
 end
 function HC.SetMenuValue(key,value,unit)
+ if not unit and type(key)=='string' and key:sub(1,7)=='compact' and HC.compact then
+  if not Allowed() then return false,'combat' end
+  local ok,why
+  if key=='compactEnabled' then ok,why=HC.SetCompactEnabled(value)
+  elseif key=='compactStyle' then ok,why=HC.SetCompactStyle(value)
+  elseif key=='compactTimePlacement' then ok,why=HC.SetCompactTimePlacement(value)
+  elseif key=='compactColor' then ok,why=HC.SetCompactColor(value)
+  elseif key=='compactHideTarget' or key=='compactHideFocus' then ok,why=HC.SetCompactHideBlizzard(key=='compactHideTarget' and 'target' or 'focus',value)
+  elseif key=='compactWidth' or key=='compactHeight' or key=='compactFont' then
+   local c=HC.compact.layout
+   ok,why=HC.SetCompactLayout(key=='compactWidth' and value or c.width,key=='compactHeight' and value or c.height,key=='compactFont' and value or c.font)
+  else return false,'value' end
+  HC.UpdateOptions();return ok,why
+ end
  if HC.unitBarsInDevelopment and (unit or key=='hideBlizzardTarget' or key=='hideBlizzardFocus') then return false,'in-development' end
  if not Allowed() then return false,'combat' end
  local specKey=unit and ('unitBars.'..unit..'.'..key) or key
@@ -91,22 +122,82 @@ local function Enable(control,on)
  if control.SetEnabled then control:SetEnabled(on) elseif on then control:Enable() else control:Disable() end
  control:SetAlpha(on and 1 or .5)
 end
+local colorSession
+local colorGuard=CreateFrame('Frame')
+local function OwnPicker(s)
+ return s and s.picker[s.callbackKey]==s.changed
+end
+local function EndColor(commit,hide)
+ local s=colorSession;if not s then return end
+ colorSession=nil;colorGuard:UnregisterAllEvents()
+ HC.EndCompactColorPreview(commit==true and Allowed())
+ if hide and OwnPicker(s) then s.picker:Hide() end
+ Status(s.host,commit and Allowed() and S('Eigene Hauptfarbe gespeichert.','Custom main color saved.') or S('Hauptfarbe nicht geändert.','Main color unchanged.'))
+end
+colorGuard:SetScript('OnEvent',function() EndColor(false,true) end)
+function HC.CancelCompactColorPicker() EndColor(false,true) end
+function HC.OpenCompactColorPicker(h)
+ if not Allowed() then return false end
+ if colorSession then EndColor(false,true) end
+ if not ColorPickerFrame then
+  local load=C_AddOns and C_AddOns.LoadAddOn or LoadAddOn
+  if type(load)=='function' then pcall(load,'Blizzard_ColorPickerFrame') end
+ end
+ local picker=ColorPickerFrame
+ if not picker or type(picker.GetColorRGB)~='function' or type(picker.HookScript)~='function' then
+  Status(h,S('Der WoW-Farbwähler ist nicht verfügbar. Bitte ein Farbfeld wählen.','WoW color picker unavailable. Choose a color swatch.'));return false
+ end
+ if picker:IsShown() then Status(h,S('Ein anderer Farbwähler ist bereits offen. Bitte zuerst schließen.','Another color picker is open. Close it first.'));return false end
+ if not HC.BeginCompactColorPreview() then return false end
+ local s={host=h,picker=picker,callbackKey=type(picker.SetupColorPickerAndShow)=='function' and 'swatchFunc' or 'func'};colorSession=s
+ s.changed=function()
+  if colorSession~=s then return end
+  if not OwnPicker(s) or not Allowed() then EndColor(false,false);return end
+  local ok,r,g,b=pcall(picker.GetColorRGB,picker)
+  if ok and HC.UpdateCompactColorPreview(r,g,b) then
+   Status(h,S('Farbvorschau – mit Okay übernehmen oder Abbrechen verwerfen.','Color preview – confirm with Okay or discard with Cancel.'))
+  end
+ end
+ s.cancel=function() if colorSession==s then EndColor(false,false) end end
+ if not picker.hcCompactColorHook then
+  picker:HookScript('OnHide',function()
+   local active=colorSession
+   if active and active.picker==picker then EndColor(OwnPicker(active) and Allowed(),false) end
+  end)
+  picker.hcCompactColorHook=true
+ end
+ local c=HC.compact.color
+ local info={r=c[1],g=c[2],b=c[3],hasOpacity=false,swatchFunc=s.changed,cancelFunc=s.cancel}
+ local ok
+ if type(picker.SetupColorPickerAndShow)=='function' then ok=pcall(picker.SetupColorPickerAndShow,picker,info)
+ elseif type(picker.SetColorRGB)=='function' then
+  picker.func=s.changed;picker.swatchFunc=nil;picker.cancelFunc=s.cancel;picker.hasOpacity=false
+  picker.previousValues={r=c[1],g=c[2],b=c[3]}
+  ok=pcall(function() picker:SetColorRGB(c[1],c[2],c[3]);picker:Show() end)
+ end
+ if not ok then EndColor(false,true);Status(h,S('Farbwähler konnte nicht geöffnet werden. Bitte ein Farbfeld wählen.','Could not open color picker. Choose a swatch.'));return false end
+ colorGuard:RegisterEvent('PLAYER_REGEN_DISABLED');return true
+end
 local function DiscardEdits(h,unitsOnly)
  for _,r in ipairs(h.rows) do if r.discard and (not unitsOnly or r.unitEdit) then r.discard() end end
 end
 local function ClearImport(h)
- h.checkedText=nil;h.checkedProfile=nil;h.checkedRevision=nil;h.checkedDB=nil
+ h.checkedText=nil;h.checkedProfile=nil;h.checkedRevision=nil;h.checkedDB=nil;h.checkedFingerprint=nil;h.checkedSummary=nil
 end
 local function SelectPage(h,key)
- if HC.unitBarsInDevelopment and Page(key)=='units' then return end
+ if colorSession and colorSession.host==h then EndColor(false,true) end
+ if HC.unitBarsInDevelopment and not HC.compact and Page(key)=='units' then return end
  DiscardEdits(h)
  ClosePopup(h);h.confirm:Hide();h.page=Page(key);HC.menuPage=h.page;h.message=nil
  h.scroll:SetVerticalScroll(0);HC.UpdateOptions()
 end
-local function Confirm(h,text,action)
+local function Confirm(h,text,action,targetName)
  -- Drop pending text before disabling controls can trigger native focus loss.
  DiscardEdits(h)
  ClosePopup(h);h.confirm.active=HC.db.activeProfile;h.confirm.caption=text;h.confirm.action=action
+ h.confirm.db=HC.db;h.confirm.revision=HC.profileRevision or 0;h.confirm.fingerprint=HC.ExportProfile()
+ h.confirm.targetName=targetName;h.confirm.targetFingerprint=targetName and HC.ProfileFingerprint(targetName) or nil
+ h.confirm.targetRecord=targetName and HC.db.profiles[targetName] or nil
  h.confirm:Show();HC.UpdateOptions()
 end
 local function Dropdown(h,anchor,items,chosen,action)
@@ -143,12 +234,27 @@ local function Row(h,page,id,title,help,height)
  r.titleText=title;r.helpText=help;r.widgets={};r.id=id;r.page=page;r.baseHeight=height or 34;h.rows[#h.rows+1]=r;h.controls[id]=r
  return r
 end
-local function Get(h,key,unit) if unit then return HC.db.unitBars[h.unit][key] else return HC.db[key] end end
+local function Get(h,key,unit)
+ if HC.compact then
+  if key=='compactEnabled' then return HC.db.compactUnits.enabled end
+  if key=='compactStyle' then return HC.compact.style end
+  if key=='compactHideTarget' or key=='compactHideFocus' then return HC.compact.hideBlizzard[key=='compactHideTarget' and 'target' or 'focus'] end
+  if key=='compactWidth' then return HC.compact.layout.width end
+  if key=='compactHeight' then return HC.compact.layout.height end
+  if key=='compactTimePlacement' then return HC.compact.timePlacement end
+  if key=='compactFont' then return HC.compact.layout.font end
+ end
+ if unit then return HC.db.unitBars[h.unit][key] else return HC.db[key] end
+end
 local function Field(h,page,id,title,help,choices,key,unit)
  local r=Row(h,page,id,title,help)
  r.items=function() return type(choices)=='function' and choices() or choices end
  r.get=function() return Get(h,key,unit) end
- r.select=function(value) Result(h,HC.SetMenuValue(key,value,unit and h.unit)) end
+ r.select=function(value)
+  local ok,why=HC.SetMenuValue(key,value,unit and h.unit);local caption=value
+  for _,item in ipairs(r.items()) do if item[1]==value then caption=T(item[2]);break end end
+  Result(h,ok,why,title,caption)
+ end
  r.button=Button(r,'',function() Dropdown(h,r.button,r.items(),r.get(),r.select) end,true);r.button:SetPoint('TOPRIGHT',-4,0);r.widgets={r.button}
  r.refresh=function()
   local caption='';for _,v in ipairs(r.items()) do if v[1]==r.get() then caption=T(v[2]);break end end;r.button:SetText(caption..'  >')
@@ -160,7 +266,7 @@ local function Toggle(h,page,id,title,help,key,unit,enabled)
  b:SetSize(30,30);b:SetPoint('TOPRIGHT',-8,2);r.button=b;r.widgets={b};r.enabled=enabled;r.checkbox=true
  r.title:SetPoint('TOPRIGHT',-48,-2)
  b:SetScript('OnClick',function()
-  if Allowed() and (not enabled or enabled()) then Result(h,HC.SetMenuValue(key,not Get(h,key,unit),unit and h.unit)) else HC.UpdateOptions() end
+  if Allowed() and (not enabled or enabled()) then local value=not Get(h,key,unit);local ok,why=HC.SetMenuValue(key,value,unit and h.unit);Result(h,ok,why,title,value) else HC.UpdateOptions() end
  end)
  r.refresh=function() b:SetChecked(Get(h,key,unit)==true) end;return r
 end
@@ -184,10 +290,10 @@ local function Number(h,page,id,title,help,key,lo,hi,step,factor,unit,enabled)
    or (context and not sameContext(context)) then return false end
   local n=tonumber(value)
   if not n or n~=n or n<lo or n>hi then
-   e:SetText(string.format('%g',current()));Status(h,T(S('Zulässiger Bereich: ','Allowed range: '))..lo..'–'..hi);return false
+   e:SetText(string.format('%g',current()));Status(h,T(title)..T(S(' nicht übernommen. Zulässig: ',' not saved. Allowed: '))..lo..'–'..hi);return false
   end
   n=math.max(lo,math.min(hi,math.floor((n-lo)/step+.5)*step+lo))
-  local ok,why=HC.SetMenuValue(key,n/factor,unit and h.unit);Result(h,ok,why);return ok
+  local ok,why=HC.SetMenuValue(key,n/factor,unit and h.unit);Result(h,ok,why,title,n);return ok
  end
  local function commit()
   if r.dirty then
@@ -256,7 +362,11 @@ local function Build(h)
  end
  local browser=Field(h,'appearance','appearanceBrowse',S('Optik auswählen','Choose appearance'),S('Kategorie und Optik gemeinsam auswählen. Favoriten werden pro Profil gespeichert.','Select category and appearance together. Favourites are saved per profile.'),function() return HC.AppearanceChoices(h.appearanceFilter) end,'element')
  browser.get=function() return HC.db.family..':'..HC.db.element end
- browser.select=function(value) Result(h,HC.ApplyAppearance(value)) end
+ browser.select=function(value)
+  local ok,why=HC.ApplyAppearance(value);local caption=value
+  for _,item in ipairs(HC.AppearanceChoices('all')) do if item[1]==value then caption=item[2];break end end
+  Result(h,ok,why,S('Optik','Appearance'),caption)
+ end
  local refreshBrowser=browser.refresh
  browser.refresh=function()
   refreshBrowser()
@@ -276,7 +386,7 @@ local function Build(h)
  Field(h,'appearance','family',S('Kategorie','Category'),S('Grafischer Aufbau und Effekte. Zauberzeit und Spielmechanik bleiben gleich.','Visual structure and effects. Spell duration and mechanics remain unchanged.'),families,'family')
  local g=Field(h,'appearance','group',S('Themengruppe','Theme group'),S('Alle Klassenoptiken sind frei wählbar. Fraktionsoptiken wählen auch das passende Wappen.','All class styles are available. Faction styles also select the matching emblem.'),Groups,'element')
  g.get=function() return HC.GetVisualGroup(HC.db.element).key end
- g.select=function(v) local list=Elements(v);if list[1] then Result(h,HC.SetMenuValue('element',list[1][1])) end end
+ g.select=function(v) local list=Elements(v);if list[1] then local ok,why=HC.SetMenuValue('element',list[1][1]);Result(h,ok,why,S('Themengruppe','Theme group'),T(HC.GetVisualGroup(HC.db.element).title)) end end
  Field(h,'appearance','element',S('Manuelle Optik','Manual appearance'),S('Gilt auch für unbekannte Zauber und Vorschauen.','Also used for unknown spells and previews.'),function() return Elements(HC.GetVisualGroup(HC.db.element).key) end,'element')
  Toggle(h,'appearance','autoSpellVisual',S('Automatische Zauberoptik','Automatic spell appearance'),function()
   return T(HC.elements[HC.db.element].faction and S('Fraktionsoptik bleibt fest. Die Automatikpräferenz bleibt gespeichert.','Faction appearance stays fixed. Your automatic preference is preserved.') or S('Bekannte, zugängliche Zauber erhalten eine passende Optik. Sonst gilt die manuelle Auswahl.','Known accessible spells use a matching appearance. Otherwise the manual choice is used.'))
@@ -316,6 +426,48 @@ local function Build(h)
  Toggle(h,'comfort','channelTicks',S('Manuelle Kanal-Hilfslinien','Manual channel guides'),S('Gleichmäßige Unterteilung, keine erkannten Schadens- oder Heilticks.','Equal segments, not detected damage or healing ticks.'),'channelTicks')
  Number(h,'comfort','channelTickCount','Anzahl Abschnitte',S('Nur bei eingeschalteten Kanal-Hilfslinien verfügbar.','Available when channel guides are enabled.'),'channelTickCount',2,10,1,1,nil,function() return HC.db.channelTicks end)
 
+ if HC.compact and HC.unitBarsInDevelopment then
+  Toggle(h,'units','compactEnabled',S('Ziel & Fokus aktivieren','Enable target & focus'),S('Kompakte Zauberleisten, auch für ausgewählte Begleiter. Einstellung bleibt nach Reload erhalten.','Compact cast bars, including selected pets. Persists after reload.'),'compactEnabled')
+  Toggle(h,'units','compactHideTarget',S('Blizzard-Zielleiste ausblenden','Hide Blizzard target cast bar'),S('Nur während Hanse den echten Zielzauber darstellt. Bei fehlenden Daten oder Grafikproblemen bleibt Blizzard verfügbar.','Only while Hanse displays the actual target cast. Missing data or artwork preserves Blizzard fallback.'),'compactHideTarget')
+  Toggle(h,'units','compactHideFocus',S('Blizzard-Fokusleiste ausblenden','Hide Blizzard focus cast bar'),S('Unabhängig vom Ziel einstellbar. Vorschau und Positionieren blenden Blizzard nicht aus.','Independent of target. Preview and positioning never suppress Blizzard.'),'compactHideFocus')
+  Field(h,'units','compactStyle',S('Kompaktes Design','Compact design'),S('Nur Ziel/Fokus. Spielerleiste bleibt unverändert. Für alle Klassen und Spezialisierungen gleich.','Target/focus only. Player bar unchanged. Same for all classes and specializations.'),{{'classic',S('1 · Klassik','1 · Classic')},{'silk',S('3 · Seidenkern','3 · Silk core')},{'split',S('4 · Geteilte Anzeige','4 · Split label')}},'compactStyle')
+  local choose=Action(h,'units','compactColorPicker',S('Hauptfarbe','Main color'),S('Farbe mit der Maus wählen. Abbrechen stellt die bisherige Farbe wieder her.','Choose a color with the mouse. Cancel restores the previous color.'),S('Farbe wählen …','Choose color …'),function() HC.OpenCompactColorPicker(h) end)
+  choose.sample=choose.button:CreateTexture(nil,'ARTWORK');choose.sample:SetSize(18,18);choose.sample:SetPoint('LEFT',8,0)
+  choose.refresh=function() choose.button:SetText(T(S('Farbe wählen …','Choose color …')));local c=HC.compact.color;choose.sample:SetColorTexture(c[1],c[2],c[3],1) end
+  local presets={{'78C8FF',S('Eisblau','Ice blue')},{'2878F0',S('Blau','Blue')},{'30CDB8',S('Türkis','Turquoise')},{'55BE55',S('Grün','Green')},{'E8BB45',S('Gold','Gold')},
+   {'F28A32',S('Orange','Orange')},{'E65050',S('Rot','Red')},{'A77BE8',S('Violett','Violet')},{'EA8EBB',S('Rosa','Pink')},{'FFFFFF',S('Weiß','White')}}
+  for line=1,2 do
+   local row=Row(h,'units','compactPalette'..line,line==1 and S('Farbfelder','Color swatches') or S('Weitere Farben','More colors'),'');row.swatches={}
+   for col=1,5 do
+    local preset=presets[(line-1)*5+col];local hex=preset[1]
+    local b=Button(row,'',function()
+     HC.CancelCompactColorPicker();local ok,why=HC.SetMenuValue('compactColor',hex);Result(h,ok,why,S('Hauptfarbe','Main color'),T(preset[2]))
+    end,true)
+    b:SetSize(40,28);b:SetPoint('TOPRIGHT',-4-(5-col)*46,0)
+    local fill=b:CreateTexture(nil,'ARTWORK');fill:SetPoint('TOPLEFT',5,-5);fill:SetPoint('BOTTOMRIGHT',-5,5)
+    fill:SetColorTexture(tonumber(hex:sub(1,2),16)/255,tonumber(hex:sub(3,4),16)/255,tonumber(hex:sub(5,6),16)/255,1)
+    Tooltip(b,preset[2],S('Anklicken, um diese Hauptfarbe zu speichern.','Click to save this main color.'))
+    row.swatches[col]={button=b,hex=hex};row.widgets[#row.widgets+1]=b
+   end
+   row.refresh=function()
+    local c=HC.compact.color;local hex=string.format('%02X%02X%02X',math.floor(c[1]*255+.5),math.floor(c[2]*255+.5),math.floor(c[3]*255+.5))
+    for _,item in ipairs(row.swatches) do if item.hex==hex then item.button:SetBackdropBorderColor(1,.82,0,1) else item.button:SetBackdropBorderColor(.4,.4,.4,1) end end
+   end
+  end
+  local color=Row(h,'units','compactColor',S('Farbcode (optional)','Color code (optional)'),S('Nur zum Übertragen einer exakten Farbe. Mit Enter übernehmen.','Only for transferring an exact color. Press Enter to apply.'))
+  color.edit=Edit(color);color.edit:SetSize(160,26);color.edit:SetPoint('TOPRIGHT',-44,0);color.edit:SetMaxLetters(6);color.widgets={color.edit}
+  color.swatch=color:CreateTexture(nil,'ARTWORK');color.swatch:SetSize(26,26);color.swatch:SetPoint('TOPRIGHT',-8,0)
+  color.edit:SetScript('OnTextChanged',function(_,user) if user then color.dirty=true end end)
+  color.discard=function() color.dirty=false;color.edit:ClearFocus() end
+  color.edit:SetScript('OnEnterPressed',function() local value=color.edit:GetText();color.discard();HC.CancelCompactColorPicker();local ok,why=HC.SetMenuValue('compactColor',value);Result(h,ok,why,S('Hauptfarbe','Main color'),value) end)
+  color.edit:SetScript('OnEscapePressed',function() color.discard();HC.UpdateOptions() end)
+  color.refresh=function() local c=HC.compact.color;color.swatch:SetColorTexture(c[1],c[2],c[3],1);if not color.dirty then color.edit:SetText(string.format('%02X%02X%02X',math.floor(c[1]*255+.5),math.floor(c[2]*255+.5),math.floor(c[3]*255+.5))) end end
+  Number(h,'units','compactWidth','Breite','','compactWidth',120,420,1)
+  Number(h,'units','compactHeight','Höhe','','compactHeight',16,36,1)
+  Field(h,'units','compactTimePlacement',S('Restzeit anzeigen','Show remaining time'),S('Sekunden mit einer Nachkommastelle. Ein Strich bedeutet: Zeitdaten nicht verfügbar.','Seconds with one decimal place. A dash means time data unavailable.'),{{'off',S('Aus','Off')},{'inside',S('Rechts in der Leiste','Inside right')},{'outside',S('Rechts daneben','Outside right')}},'compactTimePlacement')
+  Number(h,'units','compactFont',S('Schriftgröße','Font size'),S('Höhe mindestens Schriftgröße + 4.','Height at least font size + 4.'),'compactFont',10,20,1)
+  Note(h,'units','compactInfo',S('Ziel & Fokus · kompakt','Target & focus · compact'),S('Drei Designs und eine gemeinsame Hauptfarbe. Keine zusätzlichen Pet-/Ziel-des-Ziels-Leisten. Blizzard ist je Einheit optional ausblendbar und bleibt als Rückfall verfügbar.','Three designs and one shared main color. No extra pet/target-of-target bars. Blizzard can be hidden per unit and remains available as fallback.'))
+ else
  local u=Field(h,'units','unit',S('Bearbeitete Leiste','Editing bar'),S('Ziel und Fokus haben eigene Einstellungen.','Target and focus have independent settings.'),{{'target','Ziel'},{'focus','Fokus'}},'element')
  u.get=function() return h.unit end;u.select=function(v)
   if v~='target' and v~='focus' then return end
@@ -340,65 +492,153 @@ local function Build(h)
  end
  Action(h,'units','unitPreview',S('Vorschau & Position','Preview & position'),S('Nur die ausgewählte Leiste; keine dauerhafte Aktivierung abgeschalteter Leisten.','Only the selected bar; does not permanently enable a disabled bar.'),S('Diese Leiste positionieren','Position this bar'),function() HC.StartMenuPreview(h,h.unit) end)
 
+ end
  local p=Field(h,'profiles','profileSelect',S('Profil auswählen','Select profile'),S('Auswahl allein aktiviert nichts. Maximal zwölf Profile.','Selecting does not activate a profile. Up to twelve profiles.'),function()
   local r={};for _,n in ipairs(HC.ProfileNames()) do r[#r+1]={n,n..(n==HC.db.activeProfile and T(S(' · Aktiv',' · Active')) or '')} end;return r
  end,'element')
  p.get=function() return h.selectedProfile end;p.select=function(v) h.selectedProfile=v;HC.UpdateOptions() end
  Action(h,'profiles','activate',S('Ausgewähltes Profil','Selected profile'),function() return h.selectedProfile end,S('Aktivieren','Activate'),function() Result(h,HC.SwitchProfile(h.selectedProfile)) end)
- local name=Row(h,'profiles','name',S('Name für neues Profil','Name for new profile'),S('Für Erstellen, Kopieren oder Import als neues Profil.','For creating, copying or importing as a new profile.'))
+ local name=Row(h,'profiles','name',S('Profilname','Profile name'),S('Für Erstellen, Kopieren, Umbenennen oder Import als neues Profil.','For creating, copying, renaming or importing as a new profile.'))
  h.profileName=Edit(name);h.profileName:SetPoint('TOPRIGHT',-4,0);name.widgets={h.profileName};h.profileName:SetScript('OnEscapePressed',ClearFocus)
  Action(h,'profiles','new',S('Mit Standardwerten starten','Start with defaults'),S('Erstellt und aktiviert ein neues Profil. Bestehende Profile bleiben erhalten.','Creates and activates a new profile. Existing profiles are preserved.'),S('Neues Profil','New profile'),function() Result(h,HC.CreateProfile(h.profileName:GetText(),false));h.selectedProfile=HC.db.activeProfile;HC.UpdateOptions() end)
  Action(h,'profiles','copy',S('Aktives Profil kopieren','Copy active profile'),active,S('Kopie erstellen','Create copy'),function() Result(h,HC.CreateProfile(h.profileName:GetText(),true));h.selectedProfile=HC.db.activeProfile;HC.UpdateOptions() end)
+ Action(h,'profiles','rename',S('Ausgewähltes Profil umbenennen','Rename selected profile'),S('Verwendet den eingegebenen Namen. Werte und Aktivstatus bleiben erhalten; benötigt keinen freien Profilplatz.','Uses the entered name. Values and active state are preserved; no free profile slot is needed.'),S('Umbenennen …','Rename …'),function()
+  local name,newName=h.selectedProfile,h.profileName:GetText()
+  Confirm(h,function() return T(S('Profil umbenennen: ','Rename profile: '))..name..' → '..newName end,function()
+   local ok,why=HC.RenameProfile(name,newName);if ok then h.selectedProfile=newName end;Result(h,ok,why)
+  end,name)
+ end)
  Action(h,'profiles','delete',S('Ausgewähltes Profil löschen','Delete selected profile'),function() return h.selectedProfile end,S('Löschen …','Delete …'),function()
-  local name=h.selectedProfile;Confirm(h,function() return T(S('Profil endgültig löschen: ','Permanently delete profile: '))..name end,function() Result(h,HC.DeleteProfile(name));h.selectedProfile=HC.db.activeProfile end)
+  local name=h.selectedProfile;Confirm(h,function() return T(S('Profil endgültig löschen: ','Permanently delete profile: '))..name end,function() Result(h,HC.DeleteProfile(name));h.selectedProfile=HC.db.activeProfile end,name)
  end)
  Action(h,'profiles','reset',S('Zurücksetzen & aktivieren','Reset & activate'),function() return h.selectedProfile end,S('Zurücksetzen …','Reset …'),function()
   local name=h.selectedProfile;Confirm(h,function() return T(S('Auf Standardwerte zurücksetzen und aktivieren: ','Reset to defaults and activate: '))..name end,function()
    local ok,why=HC.SwitchProfile(name);if ok then ok,why=HC.ResetProfile() end;Result(h,ok,why)
-  end)
+  end,name)
  end)
  Action(h,'profiles','export',S('Aktives Profil exportieren','Export active profile'),active,S('Exportieren','Export'),function()
-  h.importText:SetText(HC.ExportProfile());HC.pendingProfileImport=nil;ClearImport(h);h.importText:HighlightText()
-  Status(h,S('Profiltext unten markieren und mit Strg+C kopieren.','Select the profile text below and copy with Ctrl+C.'))
+  h.importText:SetText(HC.ExportProfile());HC.pendingProfileImport=nil;ClearImport(h)
+  if h.importText.SetFocus then h.importText:SetFocus() end;h.importText:HighlightText()
+  Status(h,function() return T(S('Export von ','Export of '))..HC.db.activeProfile..T(S(' ist markiert. Mit Strg+C kopieren und außerhalb des Spiels sichern.',' is selected. Copy with Ctrl+C and save outside the game.')) end)
  end)
- local input=Row(h,'profiles','importText',S('Profiltext','Profile text'),S('Strg+V zum Einfügen. Import wird geprüft; es wird kein Code ausgeführt.','Ctrl+V to paste. Import is validated; no code is executed.'),245);input.title:SetPoint('TOPRIGHT',-4,-2)
+ local input=Row(h,'profiles','importText',S('Profiltext','Profile text'),S('Export mit Strg+C kopieren; Import mit Strg+V einfügen und prüfen. Fehlende Werte werden auf Standard gesetzt. Es wird kein Code ausgeführt.','Copy exports with Ctrl+C; paste imports with Ctrl+V and check them. Missing values use defaults. No code is executed.'),245);input.title:SetPoint('TOPRIGHT',-4,-2)
  local sc=CreateFrame('ScrollFrame',nil,input,'UIPanelScrollFrameTemplate');sc:SetPoint('TOPLEFT',8,-80);sc:SetPoint('BOTTOMRIGHT',-28,12)
  h.importText=Edit(sc,true);h.importText:SetSize(440,150);sc:SetScrollChild(h.importText)
- h.importText:SetScript('OnTextChanged',function() HC.pendingProfileImport=nil;ClearImport(h);if not updating then HC.UpdateOptions() end end)
+ h.importText:SetScript('OnTextChanged',function()
+  local reviewed=h.checkedText~=nil;HC.pendingProfileImport=nil;ClearImport(h)
+  if reviewed then h.message=S('Profiltext geändert. Bitte erneut prüfen; noch nichts angewendet.','Profile text changed. Check again; nothing has been applied.') end
+  if not updating then HC.UpdateOptions() end
+ end)
  h.importText:SetScript('OnEscapePressed',ClearFocus);input.widgets={h.importText}
  Action(h,'profiles','checkImport',S('1. Import prüfen','1. Check import'),S('Prüft nur. Deine Einstellungen bleiben unverändert.','Checks only. Your settings stay unchanged.'),S('Prüfen','Check'),function()
   local text=h.importText:GetText();local ok,why=HC.StageProfileImport(text);ClearImport(h)
   if ok then
    h.checkedText=text;h.checkedProfile=HC.db.activeProfile;h.checkedRevision=HC.profileRevision or 0;h.checkedDB=HC.db
+   h.checkedFingerprint=HC.ExportProfile();h.checkedSummary=HC.InspectProfileImport(text)
   end
-  if ok then Status(h,S('Import gültig. Ziel wählen und bewusst anwenden.','Import valid. Choose a destination and apply explicitly.')) else Result(h,false,why) end
+  if ok then Status(h,S('Import gültig. Zusammenfassung lesen; als neues Profil bleiben bestehende Werte erhalten.','Import valid. Read the summary; importing as a new profile preserves existing profiles.')) else Result(h,false,why) end
  end)
  local function validImport()
   return h.checkedText~=nil and h.checkedText==h.importText:GetText() and h.checkedDB==HC.db
    and h.checkedProfile==HC.db.activeProfile and h.checkedRevision==(HC.profileRevision or 0)
+   and h.checkedFingerprint==HC.ExportProfile()
  end
+ local review=Note(h,'profiles','importReview',S('Geprüfter Import – noch nicht angewendet','Checked import – not applied yet'),function()
+  local info=h.checkedSummary;if not info then return '' end
+  return string.format(T(S('%d Werte im Text; %d fehlende Werte erhalten Standardwerte.','%d values in the text; %d missing values use defaults.')),info.provided,info.defaults)..'\n'..
+   string.format(T(S('%d Unterschiede zum aktiven Profil. Größe: %g × %g; Schriftgröße: %g; Favoriten: %d.','%d differences from the active profile. Size: %g × %g; font size: %g; favourites: %d.')),info.changed,info.width,info.height,info.fontSize,info.favorites)..'\n'..
+   (info.heightAdjusted and T(S('Die Höhe berücksichtigt die Mindestgröße bei gewählter Skalierung.','Height includes the minimum size at the selected scale.'))..'\n' or '')..
+   T(S('Kompakte Ziel/Fokus-Einstellungen gelten gemeinsam und werden separat vom Spielerprofil gespeichert.','Compact target/focus settings are shared and stored separately from the player profile.'))
+ end)
+ review.baseHeight=180;review.visible=validImport
  local nr=Action(h,'profiles','importNew',S('2. Als neues Profil importieren','2. Import as a new profile'),S('Verwendet den oben eingegebenen Namen. Bestehende Profile bleiben erhalten.','Uses the name above. Existing profiles are preserved.'),S('Neu importieren','Import as new'),function()
   if validImport() then Result(h,HC.ImportAsNewProfile(h.profileName:GetText(),h.checkedText));h.selectedProfile=HC.db.activeProfile;HC.UpdateOptions() end
  end);nr.enabled=validImport
  local ow=Action(h,'profiles','overwrite',S('Alternativ: aktives Profil ersetzen','Alternatively: replace active profile'),active,S('Überschreiben …','Overwrite …'),function()
   if not validImport() then return end
   local name=HC.db.activeProfile;local text=h.checkedText
-  Confirm(h,function() return T(S('Aktives Profil mit Import ersetzen: ','Replace active profile with import: '))..name end,function()
+  Confirm(h,function() return T(S('Aktives Profil mit Import ersetzen: ','Replace active profile with import: '))..name..'\n'..T(S('Auch fehlende Werte werden durch Standardwerte ersetzt. Für den Erhalt des bisherigen Profils stattdessen als neues Profil importieren.','Missing values are replaced with defaults too. Import as a new profile instead to preserve the existing profile.')) end,function()
    if HC.db.activeProfile==name and h.checkedText==text and validImport() then Result(h,HC.ApplyProfileImport(text)) end
   end)
  end);ow.enabled=validImport
 
  Field(h,'help','language','Sprache',S('Im Profil gespeichert. Automatisch folgt der Spielsprache.','Saved in the profile. Automatic follows the game language.'),{{'auto','Automatisch'},{'deDE','Deutsch'},{'enUS','English'}},'language')
  Note(h,'help','guide',S('In vier Schritten starten','Get started in four steps'),S('1. Gestaltung wählen. 2. Größe und Position anpassen. 3. Vorschau beenden. 4. Echten Zauber wirken und Darstellung prüfen.','1. Choose an appearance. 2. Adjust size and position. 3. End preview. 4. Cast a real spell to check the result.'))
- Note(h,'help','unitDevelopment',S('Ziel & Fokus – in Arbeit','Target & focus – in development'),S('Derzeit deaktiviert. Separate kompakte Leisten sind geplant. Blizzard zeigt Ziel und Fokus weiterhin an.','Currently disabled. Separate compact bars are planned. Blizzard continues to display target and focus.'))
+ Note(h,'help','unitDevelopment',S('Ziel & Fokus – kompakt','Target & focus – compact'),S('Unter Ziel & Fokus stehen drei kompakte Designs mit eigener Hauptfarbe bereit. Die Spielerleiste bleibt unabhängig. Blizzard ist je Einheit optional ausblendbar und bleibt als Rückfall verfügbar.','Target & focus offers three compact designs with their own main color. The player bar stays independent. Blizzard can be hidden per unit and remains available as fallback.'))
  Note(h,'help','limits',S('Grenzen der Anzeige','Display limitations'),S('Geschützte oder fehlende Daten können die eigene Leiste ausblenden. Keine Empower-Zauber. Kanal-Hilfslinien sind manuell.','Restricted or missing data can hide the custom bar. No empower spells. Channel guides are manual.'))
  Action(h,'help','demo',S('Ereignis-Demo','Event demo'),S('Künstliche Beispiele für Zeitänderung, Abbruch und Unterbrechung.','Artificial examples of timing changes, cancellation and interruption.'),S('Demo starten','Start demo'),function() HC.StartMenuPreview(h,'player','feedback') end)
+ Action(h,'help','diagnosticReport',S('Diagnosebericht','Diagnostic report'),S('Öffnet einen kopierbaren Statusbericht zur Fehlersuche.','Opens a copyable status report for troubleshooting.'),S('Diagnosebericht öffnen','Open diagnostic report'),function() if HC.ShowDiagnosticReport then HC.ShowDiagnosticReport() end end)
  Action(h,'help','diagnose',S('Diagnoseinformationen','Diagnostic information'),S('Version und Status im Chat; es werden keine privaten Chatnachrichten gesammelt.','Version and status in chat; does not collect private messages.'),S('Status im Chat anzeigen','Show status in chat'),function() if SlashCmdList.HANSECAST then SlashCmdList.HANSECAST('status') end end)
  Note(h,'help','support',S('Fehler melden','Report an issue'),function() return 'Hanse Cast '..HC.version..'\n'..T(S('Nenne WoW-Version und Schritte zum Nachstellen. /hansecast öffnet dieses Menü.','Include the WoW version and reproduction steps. /hansecast opens this menu.')) end)
 end
 
 -- Independent effect instance: no reparenting of live bars, no synthetic cast
 -- events, no database writes and no changes to the player's selected theme.
+local function CompactMenuPreview(h)
+ local p=CreateFrame('Frame',nil,h);h.compactPreviewPanel=p
+ p:SetPoint('BOTTOMLEFT',16,42);p:SetPoint('BOTTOMRIGHT',-32,42);p:SetHeight(180)
+ p.caption=Label(p,S('Ziel & Fokus · künstliche Vorschau · bei Bedarf verkleinert','Target & focus · synthetic preview · scaled to fit'),'GameFontHighlightSmall')
+ p.caption:SetPoint('TOPLEFT',0,0);p.rows={};p.elapsed=0
+ p.actions={}
+ for i,item in ipairs({{'compactPositionTarget',S('Ziel positionieren','Position target'),'target'},
+  {'compactPositionFocus',S('Fokus positionieren','Position focus'),'focus'},
+  {'compactPreview',S('Vorschau neu starten','Restart preview')}}) do
+  local action=item
+  local b=Button(p,action[2],function()
+   if action[3] then HC.StartCompactMenuPosition(h,action[3]) else p.elapsed=0;p.paint() end
+  end)
+  b:SetSize(158,24);b:SetPoint('TOPRIGHT',0,-28-(i-1)*32)
+  p.actions[i]={button=b,title=action[2]};h.controls[action[1]]={button=b}
+ end
+ for i=1,2 do
+  local row={};row.frame=CreateFrame('Frame',nil,p)
+  row.background=row.frame:CreateTexture(nil,'BACKGROUND');row.background:SetColorTexture(.03,.05,.07,.92)
+  row.bar=CreateFrame('StatusBar',nil,row.frame);row.bar:SetMinMaxValues(0,1)
+  row.bar:SetFrameLevel(row.frame:GetFrameLevel()+1)
+  row.overlay=CreateFrame('Frame',nil,row.frame);row.overlay:SetAllPoints(row.frame);row.overlay:SetFrameLevel(row.bar:GetFrameLevel()+2)
+  row.label=Label(row.overlay,'','GameFontHighlight');row.label:SetWordWrap(false)
+  row.label:SetTextColor(1,1,1,1);row.label:SetShadowColor(0,0,0,1);row.label:SetShadowOffset(1,-1)
+  row.edges={};for j=1,4 do row.edges[j]=row.overlay:CreateTexture(nil,'ARTWORK');row.edges[j]:SetColorTexture(.32,.36,.4,1) end
+  p.rows[i]=row
+ end
+ p.paint=function()
+  local c=HC.compact;if not c then return end
+  local cfg=c.layout;local header=c.style=='split' and cfg.font+6 or 0
+  local total=cfg.height+header;local scale=math.min(1,math.max(.1,(h.content:GetWidth()-190)/(cfg.width+(c.timePlacement=='outside' and cfg.font*4+14 or 0))))
+  local key=c.style..':'..cfg.width..':'..cfg.height..':'..cfg.font..':'..scale..':'..c.timePlacement
+  for i,row in ipairs(p.rows) do
+   if p.key~=key then
+    row.frame:SetSize(cfg.width,total);row.frame:SetScale(scale);row.frame:ClearAllPoints()
+    row.frame:SetPoint('TOPLEFT',p,'TOPLEFT',8/scale,(-28-(i-1)*(total*scale+10))/scale)
+    row.background:ClearAllPoints();row.background:SetPoint('BOTTOMLEFT',row.frame,'BOTTOMLEFT',0,0);row.background:SetSize(cfg.width,cfg.height)
+    row.bar:ClearAllPoints();row.bar:SetPoint('BOTTOMLEFT',row.frame,'BOTTOMLEFT',1,1);row.bar:SetSize(cfg.width-2,cfg.height-2)
+    if not HC.ApplyCompactVisuals then row.bar:SetStatusBarTexture(c.style=='classic' and 'Interface\\TargetingFrame\\UI-StatusBar' or 'Interface\\AddOns\\HanseCast\\Media\\Compact\\Silk.tga') end
+    row.label:ClearAllPoints();row.label:SetFont('Fonts\\FRIZQT__.TTF',cfg.font,'');row.label:SetWidth(cfg.width-12)
+    if header>0 then row.label:SetPoint('TOPLEFT',row.frame,'TOPLEFT',4,0);row.label:SetHeight(cfg.font+2)
+    else row.label:SetPoint('LEFT',row.frame,'LEFT',6,0);row.label:SetHeight(cfg.height) end
+    for j,edge in ipairs(row.edges) do
+     edge:ClearAllPoints()
+     if j<=2 then edge:SetSize(cfg.width,1);edge:SetPoint('BOTTOMLEFT',row.frame,'BOTTOMLEFT',0,j==1 and 0 or cfg.height-1)
+     else edge:SetSize(1,cfg.height);edge:SetPoint('BOTTOMLEFT',row.frame,'BOTTOMLEFT',j==3 and 0 or cfg.width-1,0) end
+    end
+   end
+   row.bar:SetStatusBarColor(c.color[1],c.color[2],c.color[3],1)
+   if HC.ApplyCompactVisuals then HC.ApplyCompactVisuals(row,{style=c.style,color=c.color,width=cfg.width,height=cfg.height,header=header}) end
+   HC.LayoutCompactTime(row,{width=cfg.width,height=cfg.height,font=cfg.font,header=header},c.timePlacement)
+   if c.timePlacement~='off' then row.timeLabel:SetFormattedText('%.1f',3-p.elapsed%3) end
+   row.label:SetText(T(i==1 and S('Ziel · Beispielzauber','Target · sample cast') or S('Fokus · Beispielkanal','Focus · sample channel')))
+   local progress=(p.elapsed%3)/3;local value=i==1 and progress or 1-progress;row.bar:SetValue(value)
+   if row.barHighlight then row.barHighlight:SetValue(value);row.barHighlight:Show() end
+   row.bar:Show();row.overlay:Show();row.frame:Show()
+  end
+  p.key=key
+ end
+ p.tick=function(_,elapsed)
+  p.elapsed=p.elapsed+elapsed;p.throttle=(p.throttle or 0)+elapsed
+  if p.throttle>=1/30 then p.throttle=0;p.paint() end
+ end
+ p:SetScript('OnHide',function() p:SetScript('OnUpdate',nil) end);p:Hide()
+end
 local function MenuPreview(h)
  local p=CreateFrame('Frame',nil,h);h.previewPanel=p
  p:SetPoint('BOTTOMLEFT',16,42);p:SetPoint('BOTTOMRIGHT',-32,42);p:SetHeight(88)
@@ -462,7 +702,7 @@ function HC.CreateMenuCanvas(parent,native)
   local items={};for _,name in ipairs(HC.ProfileNames()) do items[#items+1]={name,name} end
   Dropdown(h,h.profileButton,items,HC.db.activeProfile,function(name) Result(h,HC.SwitchProfile(name)) end)
  end,true);h.profileButton:SetSize(210,26);h.profileButton:SetPoint('TOPRIGHT',-32,-12)
- h.status=Label(h,'','GameFontHighlightSmall');h.status:SetPoint('BOTTOMLEFT',16,12);h.status:SetPoint('BOTTOMRIGHT',-16,12);h.status:SetHeight(32)
+ h.status=Label(h,'','GameFontHighlightSmall');h.status:SetPoint('TOPLEFT',16,-91);h.status:SetPoint('TOPRIGHT',-32,-91);h.status:SetHeight(28)
  h.scroll=CreateFrame('ScrollFrame',nil,h,'UIPanelScrollFrameTemplate');h.scroll:SetPoint('TOPLEFT',16,-98);h.scroll:SetPoint('BOTTOMRIGHT',-32,140)
  h.content=CreateFrame('Frame',nil,h.scroll);h.content:SetSize(500,600);h.scroll:SetScrollChild(h.content)
  for i,p in ipairs(pageNames) do
@@ -472,9 +712,16 @@ function HC.CreateMenuCanvas(parent,native)
  local d=CreateFrame('Frame',nil,h,'BackdropTemplate');h.confirm=d;d:Hide();d:SetFrameStrata('DIALOG');d:SetFrameLevel(h:GetFrameLevel()+30);d:SetSize(460,190);d:SetPoint('CENTER');d:EnableMouse(true)
  d:SetBackdrop({bgFile='Interface\\Buttons\\WHITE8X8',edgeFile='Interface\\Buttons\\WHITE8X8',edgeSize=1});d:SetBackdropColor(.06,.07,.09,1);d:SetBackdropBorderColor(.8,.6,.3,1)
  d.text=Label(d,'');d.text:SetPoint('TOPLEFT',20,-20);d.text:SetPoint('TOPRIGHT',-20,-20)
- d.accept=Button(d,'',function() local action=d.action;local active=d.active;d:Hide();if action and active==HC.db.activeProfile then action() end;HC.UpdateOptions() end)
+ d.accept=Button(d,'',function()
+  local action=d.action
+  local valid=d:IsShown() and d.db==HC.db and d.active==HC.db.activeProfile and d.revision==(HC.profileRevision or 0)
+   and d.fingerprint==HC.ExportProfile() and (not d.targetName or (d.targetRecord==HC.db.profiles[d.targetName] and d.targetFingerprint==HC.ProfileFingerprint(d.targetName)))
+  d:Hide();d.action=nil
+  if action and valid then action() elseif action then h.message=messages.stale end
+  HC.UpdateOptions()
+ end)
  d.accept:SetSize(190,30);d.accept:SetPoint('BOTTOMRIGHT',-20,18)
- d.cancel=Button(d,'',function() d:Hide();HC.UpdateOptions() end);d.cancel:SetSize(190,30);d.cancel:SetPoint('BOTTOMLEFT',20,18)
+ d.cancel=Button(d,'',function() d:Hide();d.action=nil;HC.UpdateOptions() end);d.cancel:SetSize(190,30);d.cancel:SetPoint('BOTTOMLEFT',20,18)
  Build(h)
  local more=Action(h,'player','more',S('Weitere Einstellungen','More settings'),S('Schrift, Symbole, Akzente und genaue Position.','Font, icons, accents and exact position.'),function() return T(h.expanded and S('Weniger anzeigen','Show less') or S('Weitere Einstellungen …','More settings …')) end,function() h.expanded=not h.expanded;ClosePopup(h);HC.UpdateOptions() end)
  local order={'appearanceFilter','appearanceBrowse','favorite','family','group','element','autoSpellVisual','width','height','scale','gcd','finishCue','hideBlizzard','more'}
@@ -486,6 +733,7 @@ function HC.CreateMenuCanvas(parent,native)
   for _,widget in ipairs(r.widgets) do Tooltip(widget,r.titleText,r.helpText) end
  end
  MenuPreview(h)
+ CompactMenuPreview(h)
  h.resize=function(w)
   local width=math.max(300,w-64);h.content:SetWidth(width);h.importText:SetWidth(math.max(240,width-44))
   local tabWidth=math.min(140,(width-18)/4)
@@ -501,12 +749,17 @@ function HC.CreateMenuCanvas(parent,native)
    r.title:SetPoint('TOPRIGHT',(stack or #r.widgets==0 or r.id=='importText') and -4 or -258,-2)
    r.help:ClearAllPoints();r.help:SetPoint('TOPLEFT',0,-40-extra);r.help:SetPoint('TOPRIGHT',-8,-40-extra)
    if r.button then r.button:ClearAllPoints();r.button:SetPoint('TOPRIGHT',r.checkbox and -214 or -4,-extra) end
-   if r.edit then r.edit:ClearAllPoints();r.edit:SetPoint('TOPRIGHT',-12,-extra);r.slider:ClearAllPoints();r.slider:SetPoint('TOPRIGHT',-104,-4-extra) end
+   if r.swatches then for col,item in ipairs(r.swatches) do item.button:ClearAllPoints();item.button:SetPoint('TOPRIGHT',-4-(5-col)*46,-extra) end end
+   if r.edit then
+    r.edit:ClearAllPoints();r.edit:SetPoint('TOPRIGHT',r.swatch and -44 or -12,-extra)
+    if r.slider then r.slider:ClearAllPoints();r.slider:SetPoint('TOPRIGHT',-104,-4-extra) end
+    if r.swatch then r.swatch:ClearAllPoints();r.swatch:SetPoint('TOPRIGHT',-8,-extra) end
+   end
    if r.id=='name' then h.profileName:ClearAllPoints();h.profileName:SetPoint('TOPRIGHT',-4,-extra) end
   end
   h.content:SetHeight(h.pages[h.page].used)
   local preview=h.page=='player'
-  h.scroll:ClearAllPoints();h.scroll:SetPoint('TOPLEFT',16,-98);h.scroll:SetPoint('BOTTOMRIGHT',-32,preview and 140 or 52)
+  h.scroll:ClearAllPoints();h.scroll:SetPoint('TOPLEFT',16,-124);h.scroll:SetPoint('BOTTOMRIGHT',-32,preview and 140 or (h.page=='units' and HC.compact and 232 or 52))
  end
  h:SetScript('OnSizeChanged',function(_,w) h.resize(w) end)
  h:SetScript('OnShow',function()
@@ -518,6 +771,8 @@ function HC.CreateMenuCanvas(parent,native)
   HC.UpdateOptions()
  end)
  h:SetScript('OnHide',function()
+  if colorSession and colorSession.host==h then EndColor(false,true) end
+  h.compactPreviewPanel:SetScript('OnUpdate',nil);h.compactPreviewPanel:Hide()
   h.previewPanel:SetScript('OnUpdate',nil);HC.HideEffects(h.previewPanel.effects)
   if GameTooltip then GameTooltip:Hide() end
   ClosePopup(h);d:Hide();HC.pendingProfileImport=nil;ClearImport(h)
@@ -531,25 +786,26 @@ end
 function HC.UpdateOptions()
  if updating or not HC.db then return end;updating=true
  for _,h in ipairs(hosts) do
-  if HC.unitBarsInDevelopment and h.page=='units' then h.page='player' end
+  if HC.unitBarsInDevelopment and not HC.compact and h.page=='units' then h.page='player' end
   if not HC.db.profiles[h.selectedProfile] then h.selectedProfile=HC.db.activeProfile end
   if h.previousActive and (h.previousActive~=HC.db.activeProfile or h.previousRevision~=(HC.profileRevision or 0) or h.previousDB~=HC.db) then
    h.confirm:Hide();ClearImport(h);HC.pendingProfileImport=nil;DiscardEdits(h)
   end
+  if h.checkedFingerprint and h.checkedFingerprint~=HC.ExportProfile() then ClearImport(h);h.message=messages.stale end
   h.previousActive=HC.db.activeProfile;h.previousRevision=HC.profileRevision or 0;h.previousDB=HC.db;h.title:SetText('Hanse Cast  '..HC.version)
   h.profileButton:SetText(HC.db.activeProfile..'  >');Enable(h.profileButton,Allowed() and not h.confirm:IsShown())
   h.active:SetText(T(S('Aktives Profil: ','Active profile: '))..HC.db.activeProfile..' · '..#HC.ProfileNames()..'/12')
-  h.status:SetText(not Allowed() and T(messages.combat) or T(h.message or S('Änderungen gelten sofort für das aktive Profil.','Changes apply immediately to the active profile.')))
+  h.status:SetText(not Allowed() and T(messages.combat) or T(h.message or (h.page=='units' and S('Ziel/Fokus: Einstellungen werden sofort gespeichert. Positionen mit Fertig bestätigen.','Target/focus: settings save immediately. Confirm positions with Done.') or S('Einstellungen werden sofort im aktiven Profil gespeichert.','Settings save immediately in the active profile.'))))
   for key,nav in pairs(h.nav) do
    nav.button:SetText((h.page==key and '|cffffd080> |r' or '')..T(nav.text))
    if h.page==key then nav.button:SetBackdropColor(.25,.21,.13,1) else nav.button:SetBackdropColor(.055,.05,.04,.95) end
-   if key=='units' and HC.unitBarsInDevelopment then nav.button:SetText(T(S('Ziel & Fokus\n(in Arbeit)','Target & focus\n(in development)'))) end
-   Enable(nav.button,Allowed() and not h.confirm:IsShown() and not (key=='units' and HC.unitBarsInDevelopment))
+   if key=='units' and HC.unitBarsInDevelopment and not HC.compact then nav.button:SetText(T(S('Ziel & Fokus\n(in Arbeit)','Target & focus\n(in development)'))) end
+   Enable(nav.button,Allowed() and not h.confirm:IsShown() and not (key=='units' and HC.unitBarsInDevelopment and not HC.compact))
   end
   for key,page in pairs(h.pages) do page:SetShown(h.page==key) end;h.content:SetHeight(h.pages[h.page].used)
   for _,r in ipairs(h.rows) do
    r.title:SetText(T(r.titleText));r.help:SetText(T(r.helpText));if r.refresh then r.refresh() end
-   local on=Allowed() and not (r.page=='units' and HC.unitBarsInDevelopment) and not h.confirm:IsShown() and (not r.enabled or r.enabled());for _,w in ipairs(r.widgets) do Enable(w,on) end
+   local on=Allowed() and not (r.page=='units' and HC.unitBarsInDevelopment and not HC.compact) and not h.confirm:IsShown() and (not r.enabled or r.enabled());for _,w in ipairs(r.widgets) do Enable(w,on) end
   end
   h.resize(h:GetWidth())
   local p=h.previewPanel
@@ -558,12 +814,24 @@ function HC.UpdateOptions()
   if preview then p.paint() else HC.HideEffects(p.effects) end
   p.caption:SetText(T(S('Original-Vorschau · bei Bedarf verkleinert','Original preview · scaled to fit')))
   p.place:SetText(T(S('Positionieren','Position')));Enable(p.place,Allowed() and not h.confirm:IsShown())
+  local cp=h.compactPreviewPanel
+  local compactPreview=HC.compact and h:IsShown() and (not h.IsVisible or h:IsVisible()) and h.page=='units' and Allowed() and not h.confirm:IsShown()
+  cp:SetShown(compactPreview);cp:SetScript('OnUpdate',compactPreview and cp.tick or nil)
+  for _,action in ipairs(cp.actions) do action.button:SetText(T(action.title));Enable(action.button,compactPreview) end
+  cp.caption:SetText(T(S('Ziel & Fokus · künstliche Vorschau · bei Bedarf verkleinert','Target & focus · synthetic preview · scaled to fit')))
+  if compactPreview then cp.paint() end
   h.confirm.accept:SetText(T(S('Bestätigen','Confirm')));h.confirm.cancel:SetText(T(S('Abbrechen','Cancel')))
   if h.confirm:IsShown() then h.confirm.text:SetText(T(h.confirm.caption)) end
  end
  updating=false
 end
 HC.UpdateAdvancedOptions=HC.UpdateOptions
+function HC.OpenCompactOptions()
+ if not Allowed() then return false end
+ HC.menuPage='units'
+ for _,h in ipairs(hosts) do SelectPage(h,'units') end
+ HC.OpenOptions();return true
+end
 local function Fallback()
  if HC.settingsCanvas then
   if HC.settingsCanvas:IsShown() and SettingsPanel and type(HideUIPanel)=='function' then HideUIPanel(SettingsPanel)
@@ -639,8 +907,45 @@ end
 local events=CreateFrame('Frame');events:RegisterEvent('PLAYER_REGEN_DISABLED');events:RegisterEvent('PLAYER_REGEN_ENABLED')
 events:SetScript('OnEvent',function(_,event)
  if event=='PLAYER_REGEN_DISABLED' then
+   if HC.compact and HC.compact.positioning then HC.EndCompactPositioning(false,'combat') end
    for _,h in ipairs(hosts) do ClosePopup(h);h.confirm:Hide();ClearImport(h);DiscardEdits(h) end
   HC.pendingProfileImport=nil;HC.EndMenuPreview(false)
  end
  HC.UpdateOptions()
 end)
+
+
+-- A separate small toolbar owns only compact drag transactions. Closing or
+-- combat cancels the draft; the normal embedded menu preview remains independent.
+local compactPositionHost,compactPositionUnit
+function HC.StartCompactMenuPosition(h,unit)
+ if not Allowed() then return false end
+ HC.EndMenuPreview(false)
+ local ok,why=HC.StartCompactPositioning(unit);if not ok then Result(h,ok,why);return false end
+ compactPositionHost=h;compactPositionUnit=unit;HC.menuPreviewTransition=true
+ if h.native and SettingsPanel and type(HideUIPanel)=='function' then HideUIPanel(SettingsPanel) else h:Hide() end
+ HC.menuPreviewTransition=false
+ if not HC.compactPositionToolbar then
+  local f=CreateFrame('Frame','HanseCastCompactPositionToolbar',UIParent,'BackdropTemplate');HC.compactPositionToolbar=f
+  f:SetSize(520,110);f:SetPoint('TOP',0,-80);f:SetFrameStrata('DIALOG');f:SetClampedToScreen(true);f:EnableMouse(true)
+  f:SetBackdrop({bgFile='Interface\\Buttons\\WHITE8X8',edgeFile='Interface\\Buttons\\WHITE8X8',edgeSize=1});f:SetBackdropColor(.04,.06,.08,1)
+  f.text=Label(f,'');f.text:SetPoint('TOPLEFT',16,-12);f.text:SetPoint('TOPRIGHT',-16,-12)
+  f.done=Button(f,S('Fertig · speichern','Done · save'),function() HC.EndCompactPositioning(true,'done') end);f.done:SetPoint('BOTTOMLEFT',20,12)
+  f.cancel=Button(f,S('Abbrechen','Cancel'),function() HC.EndCompactPositioning(false,'cancel') end);f.cancel:SetPoint('BOTTOMRIGHT',-20,12)
+  f:SetScript('OnHide',function() if HC.compact and HC.compact.positioning then HC.EndCompactPositioning(false,'cancel') end end)
+  if type(UISpecialFrames)=='table' then UISpecialFrames[#UISpecialFrames+1]='HanseCastCompactPositionToolbar' end
+ end
+ local f=HC.compactPositionToolbar
+ f.text:SetText(T(unit=='target' and S('Ziel · mit linker Maustaste ziehen','Target · drag with the left mouse button') or S('Fokus · mit linker Maustaste ziehen','Focus · drag with the left mouse button'))..'\n'..T(S('Künstliche Vorschau. Erst Fertig speichert die Position.','Synthetic preview. Done saves the position.')))
+ f:Show();return true
+end
+HC.OnCompactPositionEnded=function(saved,reason)
+ local h=compactPositionHost;local unit=compactPositionUnit;compactPositionHost=nil;compactPositionUnit=nil
+ if HC.compactPositionToolbar then HC.compactPositionToolbar:Hide() end
+ if h and Allowed() and (reason=='done' or reason=='cancel') then HC.OpenCompactOptions() end
+ if h then
+  local message=T(unit=='target' and S('Zielposition','Target position') or S('Fokusposition','Focus position'))..T(saved and S(' gespeichert.',' saved.') or S(' nicht geändert.',' unchanged.'))
+  for _,host in ipairs(hosts) do if host.page=='units' then host.message=message end end
+  HC.UpdateOptions()
+ end
+end

@@ -60,6 +60,18 @@ local function Snapshot(source)
  return t
 end
 HC.ProfileSnapshot=Snapshot
+local function WriteSnapshot(target,source)
+ for key,value in pairs(Snapshot(source)) do
+  local unit,field=key:match('^unitBars%.(%w+)%.(%w+)$')
+  if unit then target.unitBars=target.unitBars or {};target.unitBars[unit]=target.unitBars[unit] or {};target.unitBars[unit][field]=value
+  else target[key]=value end
+ end
+end
+local function Serialize(source)
+ local snapshot=Snapshot(source);local keys={};for k in pairs(snapshot) do keys[#keys+1]=k end;table.sort(keys)
+ local lines={'HANSECAST:1'};for _,k in ipairs(keys) do lines[#lines+1]=k..'='..tostring(snapshot[k]) end
+ return table.concat(lines,'\n')
+end
 local function Name(name)
  return type(name)=='string' and #name>0 and #name<=48 and not name:find('[%c|=\\]') and name:find('%S')~=nil
 end
@@ -94,11 +106,16 @@ function HC.LoadExtendedSettings(db,saved)
    if count<12 and type(saved.profiles[name])=='table' then db.profiles[name]=Snapshot(saved.profiles[name]);count=count+1 end
   end
  end
- db.activeProfile=Name(saved.activeProfile) and db.profiles[saved.activeProfile] and saved.activeProfile or 'Default'
- if not db.profiles[db.activeProfile] then
-  if count>=12 then local keys={};for k in pairs(db.profiles) do keys[#keys+1]=k end;table.sort(keys);db.profiles[keys[#keys]]=nil end
-  db.profiles[db.activeProfile]=Snapshot(db)
- end
+ local validActive=Name(saved.activeProfile) and db.profiles[saved.activeProfile]
+ db.activeProfile=validActive and saved.activeProfile or 'Default'
+ if not validActive and (db.profiles.Default or count>=12) then
+  -- A damaged active name must never overwrite an existing Default or evict
+  -- a valid named profile to make room for orphaned top-level values.
+  if not db.profiles[db.activeProfile] then
+   local keys={};for key in pairs(db.profiles) do keys[#keys+1]=key end;table.sort(keys);db.activeProfile=keys[1]
+  end
+  WriteSnapshot(db,db.profiles[db.activeProfile])
+ elseif not db.profiles[db.activeProfile] then db.profiles[db.activeProfile]=Snapshot(db) end
  -- Top-level settings remain authoritative during migration and normal reloads.
  db.profiles[db.activeProfile]=Snapshot(db)
  return db
@@ -114,11 +131,7 @@ local function Apply(snapshot)
  -- Runtime-only revision invalidates unfinished edits even when a reset/import
  -- replaces the current profile without changing its name. Never persisted.
  HC.profileRevision=(HC.profileRevision or 0)+1
- for key,value in pairs(Snapshot(snapshot)) do
-  local unit,field=key:match('^unitBars%.(%w+)%.(%w+)$')
-  if unit then HC.db.unitBars=HC.db.unitBars or {};HC.db.unitBars[unit]=HC.db.unitBars[unit] or {};HC.db.unitBars[unit][field]=value
-  else HC.db[key]=value end
- end
+ WriteSnapshot(HC.db,snapshot)
  HC.SaveActiveProfile();Refresh()
 end
 function HC.CreateProfile(name,copyCurrent)
@@ -132,9 +145,26 @@ function HC.SwitchProfile(name)
  if not HC.db.profiles[name] then return false,'name' end
  HC.SaveActiveProfile();HC.db.activeProfile=name;Apply(HC.db.profiles[name]);return true
 end
+function HC.RenameProfile(name,newName)
+ if not Allowed() then return false,'combat' end
+ if not HC.db.profiles[name] then return false,'name' end
+ if not Name(newName) then return false,'invalidName' end
+ if name==newName then return true end
+ if HC.db.profiles[newName] then return false,'duplicate' end
+ -- Rename moves an existing entry, so the twelve-profile creation limit does
+ -- not apply. Save live values before moving the active entry; never Apply a
+ -- snapshot or refresh cast rendering merely because a name changed.
+ HC.SaveActiveProfile()
+ HC.db.profiles[newName]=HC.db.profiles[name];HC.db.profiles[name]=nil
+ if HC.db.activeProfile==name then HC.db.activeProfile=newName end
+ HC.profileRevision=(HC.profileRevision or 0)+1
+ if HC.UpdateOptions then HC.UpdateOptions() end
+ return true
+end
 function HC.DeleteProfile(name)
  if not Allowed() then return false,'combat' end
- if not HC.db.profiles[name] or #HC.ProfileNames()<=1 then return false,'last' end
+ if not HC.db.profiles[name] then return false,'name' end
+ if #HC.ProfileNames()<=1 then return false,'last' end
  if HC.db.activeProfile==name then
   for _,other in ipairs(HC.ProfileNames()) do if other~=name then HC.SwitchProfile(other);break end end
  end
@@ -144,10 +174,10 @@ function HC.ResetProfile()
  if not Allowed() then return false,'combat' end
  Apply(Snapshot(nil));return true
 end
-function HC.ExportProfile()
- local snapshot=Snapshot(HC.db);local keys={};for k in pairs(snapshot) do keys[#keys+1]=k end;table.sort(keys)
- local lines={'HANSECAST:1'};for _,k in ipairs(keys) do lines[#lines+1]=k..'='..tostring(snapshot[k]) end
- return table.concat(lines,'\n')
+function HC.ExportProfile() return Serialize(HC.db) end
+function HC.ProfileFingerprint(name)
+ if not HC.db or not HC.db.profiles or not HC.db.profiles[name] then return nil end
+ return Serialize(name==HC.db.activeProfile and HC.db or HC.db.profiles[name])
 end
 function HC.ParseProfile(text)
  if type(text)~='string' or #text>8192 or text:find('%z') then return nil,'size' end
@@ -171,7 +201,25 @@ function HC.ParseProfile(text)
   end
  end
  if count==0 then return nil,'empty' end
- return Snapshot(result)
+ local total=0;for _ in pairs(specs) do total=total+1 end
+ return Snapshot(result),nil,{provided=count,defaults=total-count}
+end
+-- Read-only review of the exact parsed payload. No staging, profile writes or
+-- code evaluation; missing legacy fields retain the established default policy.
+function HC.InspectProfileImport(text)
+ local snapshot,reason,details=HC.ParseProfile(text)
+ if not snapshot then return nil,reason end
+ local current=Snapshot(HC.db);local changed=0;local unitChanges=0
+ for key,value in pairs(snapshot) do
+  if value~=current[key] then
+   changed=changed+1;if key:match('^unitBars%.') or key=='hideBlizzardTarget' or key=='hideBlizzardFocus' then unitChanges=unitChanges+1 end
+  end
+ end
+ details.changed=changed;details.unitChanges=unitChanges
+ details.width=snapshot.width;details.height=math.max(24,math.ceil(24/snapshot.scale),snapshot.height);details.fontSize=snapshot.fontSize
+ details.heightAdjusted=details.height~=snapshot.height
+ details.favorites=#(Favorites(snapshot.favorites) or {})
+ return details
 end
 function HC.StageProfileImport(text)
  local snapshot,reason=HC.ParseProfile(text);HC.pendingProfileImport=snapshot

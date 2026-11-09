@@ -159,7 +159,7 @@ local function FocusAttach(frame)
     return true
 end
 function HC.UpdateBlizzardFocus()
-    if HC.unitBarsInDevelopment then HC.blizzardFocusStatus='In Arbeit – deaktiviert';return end
+    if HC.unitBarsInDevelopment then HC.blizzardFocusStatus=HC.compact and 'Standard als Rückfall verfügbar' or 'In Arbeit – deaktiviert';return end
     local s=HC.unitBars and HC.unitBars.focus
     local want=HC.db and HC.db.hideBlizzardFocus==true and s and s.config.enabled
         and not HC.unitBarsPreview and s.cast~=nil and s.reason=='active' and s.frame:IsShown()
@@ -243,7 +243,7 @@ local function TargetAttach(frame)
     return true
 end
 function HC.UpdateBlizzardTarget()
-    if HC.unitBarsInDevelopment then HC.blizzardTargetStatus='In Arbeit – deaktiviert';return end
+    if HC.unitBarsInDevelopment then HC.blizzardTargetStatus=HC.compact and 'Standard als Rückfall verfügbar' or 'In Arbeit – deaktiviert';return end
     local s=HC.unitBars and HC.unitBars.target
     local want=HC.db and HC.db.hideBlizzardTarget==true and s and s.config.enabled
         and not HC.unitBarsPreview and s.cast~=nil and s.reason=='active' and s.frame:IsShown()
@@ -280,4 +280,90 @@ function HC.UpdateBlizzardTarget()
         HC.blizzardTargetStatus=TargetRestore(s) and 'Ziel: Standard als Rückfall verfügbar'
             or 'Ziel: Wiederherstellung ausstehend'
     end
+end
+
+
+-- Compact target/focus suppression has independent ownership from player/legacy
+-- adapters. Only alpha is hooked; native scripts, events and cast data survive.
+local compactOwners={target={alpha=1},focus={alpha=1}}
+local compactRetry
+local function CompactStatus(unit,text)
+ HC[unit=='target' and 'blizzardTargetStatus' or 'blizzardFocusStatus']=text
+end
+local function CompactWant(unit)
+ local c=HC.compact;local row=c and c[unit]
+ return c and c.enabled and c.mode=='on' and c.hideBlizzard and c.hideBlizzard[unit]==true
+  and row and row.reason=='active' and row.visualAvailable~=false and row.frame:IsShown() and row.native:IsShown()
+end
+local function CompactWrite(state,alpha)
+ if not Writable(state.frame) or type(state.frame.SetAlpha)~='function' then return false end
+ state.writing=true;local ok=pcall(state.frame.SetAlpha,state.frame,alpha);state.writing=false;return ok
+end
+local function CompactRestore(unit,state)
+ if not state.suppressed then return true end
+ if not Writable(state.frame) then state.pending=true;return false end
+ -- Alpha zero may prevent Blizzard's fade from reaching Hide. Cleanup only
+ -- when BOTH current duration APIs return accessible nil; never read cast flags.
+ if state.cleanup and type(HC.NativeUnitIdle)=='function' then
+  local ok,idle=pcall(HC.NativeUnitIdle,unit)
+  if ok and Accessible(idle) and idle==true then
+   if type(state.frame.Hide)~='function' or not pcall(state.frame.Hide,state.frame) then state.pending=true;return false end
+  end
+ end
+ state.suppressed=false
+ if not CompactWrite(state,state.alpha) then state.suppressed=true;state.pending=true;return false end
+ state.pending=false;state.cleanup=false;return true
+end
+local function CompactRetryEvents()
+ if compactRetry then compactRetry:UnregisterAllEvents() end
+ for _,state in pairs(compactOwners) do
+  if state.pending then
+   if not compactRetry then
+    compactRetry=CreateFrame('Frame')
+    compactRetry:SetScript('OnEvent',function() HC.UpdateCompactBlizzard('target');HC.UpdateCompactBlizzard('focus') end)
+   end
+   compactRetry:RegisterEvent('PLAYER_REGEN_ENABLED');compactRetry:RegisterEvent('PLAYER_ENTERING_WORLD');return
+  end
+ end
+end
+local function CompactAttach(unit,state,frame)
+ if state.frame==frame then return true end
+ if state.frame and not CompactRestore(unit,state) then return false end
+ if not Writable(frame) or type(hooksecurefunc)~='function' or type(frame.SetAlpha)~='function' or type(frame.GetAlpha)~='function' then return false end
+ if state.hooked and state.hooked[frame] then state.frame=frame;return true end
+ -- Each old hook becomes inert when its frame no longer owns this unit slot.
+ local ok=pcall(hooksecurefunc,frame,'SetAlpha',function(_,alpha)
+  if state.frame~=frame or state.writing or not state.suppressed then return end
+  if Accessible(alpha) and HC.ValidNumber(alpha,0,1) then state.alpha=alpha end
+  if not CompactWant(unit) then CompactRestore(unit,state)
+  elseif not CompactWrite(state,0) then state.pending=true;CompactStatus(unit,'Wiederherstellung ausstehend') end
+  CompactRetryEvents()
+ end)
+ if not ok then return false end
+ state.frame=frame;state.hooked=state.hooked or setmetatable({}, {__mode='k'});state.hooked[frame]=true;return true
+end
+function HC.UpdateCompactBlizzard(unit)
+ local state=compactOwners[unit];if not state then return end
+ if not CompactWant(unit) then
+  CompactStatus(unit,CompactRestore(unit,state) and 'Standard als Rückfall verfügbar' or 'Wiederherstellung ausstehend')
+  CompactRetryEvents();return
+ end
+ local frame
+ if unit=='target' then frame=TargetFrameSpellBar or (TargetFrame and TargetFrame.spellbar)
+ else frame=FocusFrameSpellBar or (FocusFrame and FocusFrame.spellbar) end
+ if not frame or not CompactAttach(unit,state,frame) or not Writable(frame) then
+  CompactStatus(unit,CompactRestore(unit,state) and 'Standard bleibt: Frame nicht sicher veränderbar' or 'Wiederherstellung ausstehend')
+  CompactRetryEvents();return
+ end
+ if not state.suppressed then
+  local ok,alpha=pcall(frame.GetAlpha,frame)
+  -- Do not guess an inaccessible original alpha: preserve the native fallback.
+  if not ok or not Accessible(alpha) or not HC.ValidNumber(alpha,0,1) then CompactStatus(unit,'Standard bleibt: Alpha nicht zugänglich');return end
+  state.alpha=alpha;state.suppressed=true;state.cleanup=true
+ end
+ local ok,alpha=pcall(frame.GetAlpha,frame)
+ if ok and Accessible(alpha) and alpha==0 then CompactStatus(unit,'Durch kompakte Hanse-Leiste ersetzt');return end
+ if CompactWrite(state,0) then state.pending=false;CompactStatus(unit,'Durch kompakte Hanse-Leiste ersetzt')
+ else CompactStatus(unit,CompactRestore(unit,state) and 'Standard als Rückfall verfügbar' or 'Wiederherstellung ausstehend') end
+ CompactRetryEvents()
 end

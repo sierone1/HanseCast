@@ -93,6 +93,10 @@ function HC.CreateView()
     g.bar=CreateFrame("StatusBar",nil,g)
     g.bar:SetPoint("TOPLEFT");g.bar:SetPoint("BOTTOMRIGHT")
     g.bar:SetStatusBarTexture(texture)
+    -- Dedicated widget so a native timer never owns the readable/preview bar.
+    g.nativeBar=CreateFrame('StatusBar',nil,g)
+    g.nativeBar:SetPoint('TOPLEFT');g.nativeBar:SetPoint('BOTTOMRIGHT')
+    g.nativeBar:SetStatusBarTexture(texture);g.nativeBar:Hide()
     g.label=g:CreateFontString(nil,"OVERLAY","GameFontHighlightSmall")
     g.label:SetPoint("TOPRIGHT",g,"BOTTOMRIGHT",0,-4);g.label:SetText("GCD");g:Hide()
     g.hint=g:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
@@ -244,7 +248,16 @@ end
 function HC.DrawGCD(gcd,now)
     local g=HC.gcdFrame
     if not g then return end
-    if not HC.db.gcd or not gcd or gcd.finish<=now or gcd.finish<=gcd.start then g:Hide();return end
+    if not HC.db.gcd or not gcd then g.nativeBar:Hide();g:Hide();return end
+    if gcd.native then
+        -- No Lua timer or guessed end: the native remaining-time fill reaches
+        -- zero itself. No background/label is left visible when it empties.
+        g.bar:Hide();g.background:Hide();g.label:Hide();g.hint:Hide()
+        g.nativeBar:Show();g:SetAlpha(HC.db.opacity or 1);g:Show();return
+    end
+    g.nativeBar:Hide()
+    if gcd.finish<=now or gcd.finish<=gcd.start then g:Hide();return end
+    g.bar:Show();g.background:Show()
     local duration=gcd.finish-gcd.start
     if g.bar.hcDuration~=duration then g.bar:SetMinMaxValues(0,duration);g.bar.hcDuration=duration end
     g.bar:SetValue(math.max(0,gcd.finish-now))
