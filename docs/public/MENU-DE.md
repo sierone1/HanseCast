@@ -1,4 +1,4 @@
-# Menü – Hanse Cast 1.0.6
+# Menü – Hanse Cast 1.0.7
 
 - **Spieler:** Optik, Größe und Position; weitere Einstellungen für Schrift, Symbol, Zeit und Komfort.
 - **Ziel & Fokus:** aktivieren, Blizzard-Ziel-/Fokuszauberleiste getrennt ausblenden, drei Designs, Farbwähler und Farbfelder, Maße und Schriftgröße. **Restzeit anzeigen:** Aus, Rechts in der Leiste, Rechts daneben. Vorschau und getrennte Positionierknöpfe bleiben erreichbar.

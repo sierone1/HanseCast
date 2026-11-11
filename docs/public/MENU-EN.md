@@ -1,4 +1,4 @@
-# Menu – Hanse Cast 1.0.6
+# Menu – Hanse Cast 1.0.7
 
 - **Player:** appearance, size and positioning; additional font, icon, time and comfort settings.
 - **Target & focus:** enable, hide Blizzard target/focus cast bars separately, three designs, native color picker and swatches, dimensions and font size. **Show remaining time:** Off, Inside right, Outside right. Preview and separate positioning buttons remain accessible.

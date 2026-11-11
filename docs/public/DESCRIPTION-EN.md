@@ -4,7 +4,7 @@ Animated player cast bars and compact target/focus cast bars for **WoW Forever 1
 
 ## Player cast bar
 
-145 visual variants across five families: Element Stream, Splinters & Sparks, Silk Flow, Pulse and Mistlight. Class-inspired and Alliance/Horde artwork can be selected independently of your character's class. Holy and Discipline artwork has been revised for 1.0.6.
+145 visual variants across five families: Element Stream, Splinters & Sparks, Silk Flow, Pulse and Mistlight. Class-inspired and Alliance/Horde artwork can be selected independently of your character's class. Holy and Discipline artwork has been revised for 1.0.7.
 
 Customize position, size, fonts, time display and icon placement. Includes a separate GCD indicator, favorites, up to twelve named profiles with copy/rename and validated text import/export, comfort presets and reduced motion. Optional latency, cast-start estimate and spell queue indicators remain separate; the queue display does not change client settings.
 
@@ -27,10 +27,10 @@ Extract the `HanseCast` folder into `Interface/AddOns`, with `HanseCast.toc` dir
 
 ## Compatibility and limitations
 
-Version **1.0.6**, Forever **1.60.1**, interface **16001**. Compact unit bars currently require build **70862**. Other WoW editions and empowered spells are not supported. No additional library required. German and English UI.
+Version **1.0.7**, Forever **1.60.1**, interface **16001**. Compact unit bars currently require build **70862/70888**. Other WoW editions and empowered spells are not supported. No additional library required. German and English UI.
 
 Unavailable permitted time data is shown as a dash. Player bars require accessible timestamps; supported native duration objects drive unit/GCD timers. Automatic channel ticks are not enabled; channel guides are manual aids. Other cast-bar addons may produce overlapping displays.
 
-The user accepted the recent alpha features overall; 54 automated suites exercise simulated interfaces. This does not guarantee every class, spell or addon combination.
+55 automated suites exercise simulated interfaces. Updated target/focus bars on build 70888 still need in-game acceptance. This does not guarantee every class, spell or addon combination.
 
 [Source and issue reports](https://github.com/sierone1/HanseCast) · All Rights Reserved. Not affiliated with or endorsed by Blizzard.

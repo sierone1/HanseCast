@@ -23,7 +23,7 @@ local reasons={off=T('aus','off'),preview=T('synthetische Vorschau','synthetic p
  absent=T('keine Einheit','no unit'),changed=T('Einheit gewechselt','unit changed'),
  missing=T('Schnittstelle fehlt','API missing'),guard=T('Schutzprüfung fehlt/fehlerhaft','secrecy guard unavailable/failed'),
  denied=T('native Übergabe abgelehnt','native submission rejected'),error=T('Abfrage fehlgeschlagen','query failed'),
- unsupported=T('nur Forever 1.60.1 Build 70862','only Forever 1.60.1 build 70862'),
+ unsupported=T('nur Forever 1.60.1 Build 70862/70888','only Forever 1.60.1 build 70862/70888'),
  combat=T('Aktivierung/Anpassung nur außerhalb des Kampfes','enable/change outside combat only'),
  events=T('Ereignisregistrierung fehlgeschlagen','event registration failed'),
  ['font-fit']=T('Schrift passt nicht: Höhe muss mindestens Schriftgröße + 4 sein.','Font does not fit: height must be at least font size + 4.')}
@@ -39,7 +39,7 @@ local function Supported()
  if type(GetBuildInfo)~='function' or type(issecretvalue)~='function' then return false end
  local ok,version,build,_,interface=pcall(GetBuildInfo)
  return ok and Accessible(version) and Accessible(build) and Accessible(interface)
-  and version=='1.60.1' and (build=='70862' or build==70862) and interface==16001
+  and version=='1.60.1' and (build=='70862' or build==70862 or build=='70888' or build==70888) and interface==16001
 end
 local function OutsideCombat()
  if type(InCombatLockdown)~='function' then return false end
