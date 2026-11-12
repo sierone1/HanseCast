@@ -115,7 +115,8 @@ function HC.ResolveTheme()
     return {family=family,element=element,title=HC.families[family].title.." / "..palette.title,
         identityLabel=identity,cast=palette.color,channel=palette.color,gcd=palette.color,
         bright=palette.bright,secondary=palette.secondary,secondaryBright=secondaryBright,
-        ghost=ghost,accentTint=HC.GetIdentityTint(HC.db.identity),classMaterial=palette.classMaterial,rail=2,texture="Interface\\Buttons\\WHITE8X8"}
+        ghost=ghost,accentTint=HC.GetIdentityTint(HC.db.identity),classMaterial=palette.classMaterial,
+        materialElement=palette.materialElement,rail=2,texture="Interface\\Buttons\\WHITE8X8"}
 end
 
 function HC.UpdateSpellTheme(cast)

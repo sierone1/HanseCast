@@ -1,3 +1,22 @@
+# Retail 1.0.8-retail-alpha.2 / Forever packaging audit
+
+- Retail: compact target/focus bars now retain Blizzard for Empower, inaccessible Empower flags and failed channel metadata. Empower events trigger reconciliation; regression tests cover fallback and recovery.
+- Both ZIPs include user documentation, license and credits with file hashes. Retail packaging uses a temporary archive and verifies every member before replacing the final ZIP.
+- Forever runtime remains 1.0.8-alpha.1. Native acceptance is still pending for both variants. Full Retail guide: docs/public/RETAIL.md; Forever update: docs/public/RELEASE-1.0.8.md.
+
+---
+
+# Hanse Cast 1.0.8-alpha.1 / Retail 1.0.8-retail-alpha.1
+
+- Erstinstallation: Optik nach aktiver Spezialisierung bzw. Forever-Talentpunkten; Blizzard-Spielerleiste ausblenden an; automatische Optik nach Zauber weiterhin optional und aus.
+- Bestehende Einstellungen bleiben erhalten. Blizzard bleibt Rückfall bei nicht darstellbaren Zaubern.
+- Forever: Krieger-Zerschmettern und Schurken-Werkzeugcasts ergänzt; vorhandene Priester-, Druiden-, Schamanen- und weitere Klassenwechsel geprüft.
+- Retail: eigener Zauberkatalog für alle 13 Klassen, zusätzliche Klassenkategorien mit vorhandenen Material-Aliasen, einschließlich Verschlinger.
+- First install now chooses specialization artwork, enables safe Blizzard player-bar replacement, and leaves per-spell switching off. Existing settings are preserved. Retail has a separate 13-class catalog; additional class labels reuse shipped art.
+- Mocktests ersetzen keine Ingame-Abnahme. Details: docs/public/AUTO-SPELL-VISUALS.md.
+
+---
+
 # Hanse Cast 1.0.7
 
 ## Deutsch

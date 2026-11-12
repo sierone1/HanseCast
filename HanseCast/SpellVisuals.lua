@@ -62,7 +62,14 @@ Add("shaman_restoration", {331,332,547,913,939,959,8005,10395,10396,25357,
 -- Not Auto Shot, instant shots, melee actions, or Volley's damage-tick IDs.
 Add("hunter_marksman", {19434,20900,20901,20902,20903,20904,
     1310687,1310785,1310786,1510,14294,14295})
--- Warrior / Rogue remain manual. Their melee events never create a cast here.
+-- Warrior Slam (including Forever Improved Slam overrides) and Rogue utility.
+-- Classification does not create a cast: only a real readable cast/channel is drawn.
+Add("warrior_arms", {1464,8820,11604,11605,1310196,1310197,1310198,1310199,1310200})
+Add("rogue_subtlety", {1804,1842}) -- Pick Lock / Disarm Trap
+
+-- Retail replaces the complete catalog after this file, avoiding cross-client
+-- ID collisions and accidental use of Forever-only overrides in Retail.
+HC.spellVisualCatalog = spells
 
 function HC.ResolveSpellVisual(cast)
     local manual = HC.db.element
@@ -74,7 +81,7 @@ function HC.ResolveSpellVisual(cast)
     local id = cast.spellID
     if not HC.Accessible(id) then return manual, "restricted" end
     if not HC.ValidNumber(id, 1, 2147483647) or id % 1 ~= 0 then return manual, "unknown" end
-    local element = spells[id]
+    local element = HC.spellVisualCatalog[id]
     if not element then return manual, "unknown" end
     if not HC.elements or not HC.elements[element] then return manual, "unavailable" end
     return element, "spell"

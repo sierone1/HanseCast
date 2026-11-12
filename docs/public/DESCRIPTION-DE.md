@@ -1,5 +1,7 @@
 # Hanse Cast – Deutsch
 
+Aktueller Vorabstand: Forever 1.0.8-alpha.1. Erstwahl nach Spezialisierung, sichere Blizzard-Spielerleisten-Ausblendung an, optionale Zauberautomatik aus; vorhandene Einstellungen bleiben erhalten. [Update](RELEASE-1.0.8.md). Retail ist eine [separate Variante](RETAIL.md). Ingame-Abnahme offen.
+
 Animierte Spieler-Zauberleisten und kompakte Ziel-/Fokusleisten für **WoW Forever 1.60.1**.
 
 ## Spielerleiste
@@ -27,10 +29,10 @@ Den Ordner `HanseCast` nach `Interface/AddOns` entpacken. `HanseCast.toc` muss d
 
 ## Kompatibilität und Grenzen
 
-Version **1.0.7**, Forever **1.60.1**, Interface **16001**. Kompakte Einheitenanzeigen derzeit nur für Build **70862/70888**. Andere WoW-Ausgaben und Empower werden nicht unterstützt. Keine zusätzliche Bibliothek erforderlich. Deutsche und englische Oberfläche.
+Version **1.0.8-alpha.1**, Forever **1.60.1**, Interface **16001**. Kompakte Einheitenanzeigen derzeit nur für Build **70862/70888**. Andere WoW-Ausgaben und Empower werden nicht unterstützt. Keine zusätzliche Bibliothek erforderlich. Deutsche und englische Oberfläche.
 
 Bei fehlenden zulässigen Zeitdaten zeigt die optionale Restzeit einen Strich. Die Spielerleiste benötigt zugängliche Zeitangaben; native Einheiten-/GCD-Timer verwenden unterstützte Dauerobjekte. Automatische Kanalticks sind nicht aktiviert; Hilfslinien sind manuelle Orientierung. Weitere Castbar-Addons können überlappende Anzeigen verursachen.
 
-55 automatisierte Testsuiten prüfen simulierte Schnittstellen. Die korrigierten Ziel-/Fokusleisten auf Build 70888 sind noch nicht im Spiel abgenommen. Keine pauschale Freigabe jeder Klasse, jedes Zaubers oder jeder Addonkombination.
+56 automatisierte Testsuiten prüfen simulierte Schnittstellen. Die korrigierten Ziel-/Fokusleisten auf Build 70888 sind noch nicht im Spiel abgenommen. Keine pauschale Freigabe jeder Klasse, jedes Zaubers oder jeder Addonkombination.
 
 [Quellcode und Fehlerberichte](https://github.com/sierone1/HanseCast) · Lizenz: All Rights Reserved. Keine Verbindung zu oder Empfehlung durch Blizzard.

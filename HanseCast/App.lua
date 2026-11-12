@@ -194,7 +194,7 @@ function HC.StartCompactSafely()
 end
 local function Start()
     if HC.ready then return end
-    HC.db=HC.LoadSettings(HanseCastDB)
+    HC.db=HC.LoadSettings(HC.FirstRunSettings(HanseCastDB))
     HC.db.launches=(HC.db.launches or 0)+1
     HanseCastDB=HC.db
     HC.CreateView(); HC.ready=true

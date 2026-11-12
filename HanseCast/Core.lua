@@ -1,10 +1,10 @@
 local _, HC = ...
-HC.version = "1.0.7"
+HC.version = "1.0.8-alpha.1"
 -- Release gate, deliberately not a saved setting or profile option.
 HC.unitBarsInDevelopment = true
 HC.defaults = { schema = 3, x = 0, y = -180, width = 300, height = 32, scale = 1,
     theme = "modern", family = "element", element = "frost", identity = "class", faction = "none",
-    gcd = true, hideBlizzard = false, hideBlizzardFocus = true, hideBlizzardTarget = true, finishCue = true, autoSpellVisual = false }
+    gcd = true, hideBlizzard = true, hideBlizzardFocus = true, hideBlizzardTarget = true, finishCue = true, autoSpellVisual = false }
 
 HC.elementKeys={frost=true,fire=true,arcane=true,faction_alliance=true,faction_horde=true,
     warlock_affliction=true,warlock_demonology=true,warlock_destruction=true,

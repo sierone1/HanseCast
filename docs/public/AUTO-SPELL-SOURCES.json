@@ -1,0 +1,151 @@
+{
+  "checked": "2026-11-12",
+  "scope": "Spell identity/spec metadata, not live client availability; no rotation code copied",
+  "sources": [
+    {
+      "key": "PriestDiscipline",
+      "url": "https://github.com/Hekili/hekili/blob/thewarwithin/TheWarWithin/PriestDiscipline.lua",
+      "blobSha": "9bed4648fb0b40d5902e5a349d862f4cfb944b1e"
+    },
+    {
+      "key": "PriestShadow",
+      "url": "https://github.com/Hekili/hekili/blob/thewarwithin/TheWarWithin/PriestShadow.lua",
+      "blobSha": "17ff409e1ef0ed33fcf54b9113645a869969f210"
+    },
+    {
+      "key": "PriestHoly",
+      "url": "https://github.com/Hekili/hekili/blob/thewarwithin/TheWarWithin/PriestHoly.lua",
+      "blobSha": "2e1a5d226f43fc4b09c8508c7823b885ae9c04f9"
+    },
+    {
+      "key": "DruidBalance",
+      "url": "https://github.com/Hekili/hekili/blob/thewarwithin/TheWarWithin/DruidBalance.lua",
+      "blobSha": "e3c5540d61082bcec910d87ca6e00e7ef914670e"
+    },
+    {
+      "key": "ShamanElemental",
+      "url": "https://github.com/Hekili/hekili/blob/thewarwithin/TheWarWithin/ShamanElemental.lua",
+      "blobSha": "b1df90aa15d0f9732fa089b4b25dff252354b243"
+    },
+    {
+      "key": "ShamanRestoration",
+      "url": "https://github.com/Hekili/hekili/blob/thewarwithin/TheWarWithin/ShamanRestoration.lua",
+      "blobSha": "70133e2366642427dde64df5664d209408a9b69f"
+    },
+    {
+      "key": "HunterMarksmanship",
+      "url": "https://github.com/Hekili/hekili/blob/thewarwithin/TheWarWithin/HunterMarksmanship.lua",
+      "blobSha": "5741f0f176e24e1bb90a9a26c079c4c041d97bba"
+    },
+    {
+      "key": "RogueAssassination",
+      "url": "https://github.com/Hekili/hekili/blob/thewarwithin/TheWarWithin/RogueAssassination.lua",
+      "blobSha": "705657c5cfa254a55e71c366750712509382be4d"
+    },
+    {
+      "key": "MonkMistweaver",
+      "url": "https://github.com/Hekili/hekili/blob/thewarwithin/TheWarWithin/MonkMistweaver.lua",
+      "blobSha": "2189e94de2d8b26f21c792c03bc0fed0337c1e13"
+    },
+    {
+      "key": "MonkWindwalker",
+      "url": "https://github.com/Hekili/hekili/blob/thewarwithin/TheWarWithin/MonkWindwalker.lua",
+      "blobSha": "5b1c6b5db72c6a6479d8b5ed7b0542a6c20e95f4"
+    },
+    {
+      "key": "MonkBrewmaster",
+      "url": "https://github.com/Hekili/hekili/blob/thewarwithin/TheWarWithin/MonkBrewmaster.lua",
+      "blobSha": "856d7e7b68097b4563cad220b2bb3f0216275ab7"
+    },
+    {
+      "key": "DemonHunterHavoc",
+      "url": "https://github.com/Hekili/hekili/blob/thewarwithin/TheWarWithin/DemonHunterHavoc.lua",
+      "blobSha": "ee79d118e31c8d99b268117d2984c40bc2a8ab1c"
+    },
+    {
+      "key": "DemonHunterVengeance",
+      "url": "https://github.com/Hekili/hekili/blob/thewarwithin/TheWarWithin/DemonHunterVengeance.lua",
+      "blobSha": "850c7655cee760a27059da8fa14b2f3ac1657f9d"
+    },
+    {
+      "key": "DeathKnightBlood",
+      "url": "https://github.com/Hekili/hekili/blob/thewarwithin/TheWarWithin/DeathKnightBlood.lua",
+      "blobSha": "283f128210128b7acc340ecb1a3b9f874bb26684"
+    },
+    {
+      "key": "EvokerPreservation",
+      "url": "https://github.com/Hekili/hekili/blob/thewarwithin/TheWarWithin/EvokerPreservation.lua",
+      "blobSha": "9b6aae2040490a6451dcd0e2e7f8ff29f9642031"
+    },
+    {
+      "key": "EvokerAugmentation",
+      "url": "https://github.com/Hekili/hekili/blob/thewarwithin/TheWarWithin/EvokerAugmentation.lua",
+      "blobSha": "8ad76bf2c8d0cebe8125b86304f73c8431e6e978"
+    },
+    {
+      "key": "EvokerDevastation",
+      "url": "https://github.com/Hekili/hekili/blob/thewarwithin/TheWarWithin/EvokerDevastation.lua",
+      "blobSha": "0e14206fbba2461dac9568bfe199fe5254fa77df"
+    },
+    {
+      "key": "WarlockAffliction",
+      "url": "https://github.com/Hekili/hekili/blob/thewarwithin/TheWarWithin/WarlockAffliction.lua",
+      "blobSha": "27f2b7413d2ebfc1f9f993155e594c4e5e7cd082"
+    },
+    {
+      "key": "WarlockDemonology",
+      "url": "https://github.com/Hekili/hekili/blob/thewarwithin/TheWarWithin/WarlockDemonology.lua",
+      "blobSha": "faba11e22ce507b415cd59aad839212900610bf3"
+    },
+    {
+      "key": "WarlockDestruction",
+      "url": "https://github.com/Hekili/hekili/blob/thewarwithin/TheWarWithin/WarlockDestruction.lua",
+      "blobSha": "bf81b0a949fce1832976e7599d6211bff35ea20e"
+    },
+    {
+      "key": "WarriorArms",
+      "url": "https://github.com/Hekili/hekili/blob/thewarwithin/TheWarWithin/WarriorArms.lua",
+      "blobSha": "e9dbbb261eba1c2ecec7a47aecd150c8a40e054e"
+    },
+    {
+      "key": "MageFrost",
+      "url": "https://github.com/Hekili/hekili/blob/thewarwithin/TheWarWithin/MageFrost.lua",
+      "blobSha": "47cafceb02c32565bdbac9f598018edb68da120e"
+    },
+    {
+      "key": "rogueClassic",
+      "url": "https://github.com/coolmodi/SpellCalc/blob/c6b53a7c07c90d7f7c261f8aa71b5a3e9d5ebd6c/tools/spelldata_creator/data/classic/class_spells/rogue.json",
+      "blobSha": "afb7c1efdd6c1f69633245f9cc45827a8656864c"
+    },
+    {
+      "key": "warriorClassic",
+      "url": "https://github.com/coolmodi/SpellCalc/blob/c6b53a7c07c90d7f7c261f8aa71b5a3e9d5ebd6c/tools/spelldata_creator/data/classic/class_spells/warrior.json",
+      "blobSha": "ed3da1f1f16a77058360742fb6825d063cec2b82"
+    },
+    {
+      "key": "currentDH",
+      "url": "https://github.com/simulationcraft/simc/blob/midnight/engine/class_modules/sc_demon_hunter.cpp",
+      "blobSha": "d7ee195c60e83f48cca16400a51bd3f68c94b710"
+    },
+    {
+      "key": "engine/dbc/generated/sc_specialization_data.inc",
+      "url": "https://github.com/simulationcraft/simc/blob/midnight/engine/dbc/generated/sc_specialization_data.inc",
+      "blobSha": "7543591eff8dc62b883f453e0cdde557faaf71e4"
+    },
+    {
+      "key": "engine/dbc/generated/specialization_spells.inc",
+      "url": "https://github.com/simulationcraft/simc/blob/midnight/engine/dbc/generated/specialization_spells.inc",
+      "blobSha": "f65fd2f82e2aef717f2de2b45ecf572026cd4614"
+    },
+    {
+      "key": "retailTraits",
+      "url": "https://github.com/simulationcraft/simc/blob/midnight/engine/dbc/generated/trait_data.inc",
+      "blobSha": "dec0c8df988ec0fa634357f3926412bf48884428"
+    },
+    {
+      "key": "specApiSource",
+      "url": "https://github.com/Gethe/wow-ui-source/blob/live/Interface/AddOns/Blizzard_APIDocumentationGenerated/SpecializationInfoDocumentation.lua",
+      "blobSha": "d5015ff58318d4a456244027da9f8fa147347c36"
+    }
+  ]
+}

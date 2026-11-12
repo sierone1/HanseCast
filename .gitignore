@@ -6,6 +6,15 @@
 !/LICENSE.txt
 !/CHANGELOG.md
 !/HanseCast/
+!/retail/
+!/tools/
+/tools/*
+!/tools/package_retail.py
+!/tools/package_addon.py
+!/tests/
+/tests/*
+!/tests/test_retail.py
+!/tests/test_class_automation.py
 !/docs/
 /docs/*
 !/docs/public/

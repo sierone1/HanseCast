@@ -203,13 +203,14 @@ local function SelectClassMaterial(e,theme)
     e.tipGlow:SetVertexColor(unpack(theme.cast));e.tipCore:SetVertexColor(unpack(theme.bright))
 end
 local function SelectStaticMaterial(e,theme)
+    local materialElement=theme.materialElement or theme.element
     local accent=theme.accentTint or {1,1,1,1}
     local suffix=e.mageFireCompact and "-small" or ""
     local folder=theme.classMaterial and CLASS_STATIC_ART or STATIC_ART
-    local path=folder..theme.family.."-"..theme.element
+    local path=folder..theme.family.."-"..materialElement
     e.staticMaterial=true;e.mageStatic=not theme.classMaterial;e.classMaterial=theme.classMaterial==true
     e.mageFire=theme.family=="element" and theme.element=="fire"
-    RequiredAsset(e,e.reveal,folder..theme.element.."-reveal.tga","CLAMP","CLAMP","LINEAR")
+    RequiredAsset(e,e.reveal,folder..materialElement.."-reveal.tga","CLAMP","CLAMP","LINEAR")
     e.reveal:SetTexCoord(0,1,0,1)
     RequiredAsset(e,e.body,path..suffix..".tga","CLAMP","CLAMP","LINEAR")
     SetAsset(e.materialGlow,path..suffix.."-glow.tga","CLAMP","CLAMP","LINEAR")
@@ -269,7 +270,7 @@ local function SelectMaterial(e,theme)
         end
     end
     e.classMaterial=false
-    if theme.classMaterial or theme.element=="frost" or theme.element=="fire" or theme.element=="arcane" then SelectStaticMaterial(e,theme);return end
+    if theme.materialElement or theme.classMaterial or theme.element=="frost" or theme.element=="fire" or theme.element=="arcane" then SelectStaticMaterial(e,theme);return end
     local folder=theme.element~="arcane" and (e.softLow and "SoftLow\\" or (e.softLOD and "Soft\\" or "")) or ""
     local path=ART..folder..key
     -- Fade the old three strands before the local converging join takes over.
