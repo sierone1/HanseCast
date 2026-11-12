@@ -7,7 +7,7 @@ import sys
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = '1.0.8-retail-alpha.2'
+VERSION = '1.0.8-retail'
 
 def replace_once(text, old, new):
     if text.count(old) != 1:
@@ -29,7 +29,7 @@ def sources():
     def edit(name, old, new):
         result[name] = replace_once(result[name].decode('utf-8'), old, new).encode('utf-8')
     edit('HanseCast.toc', '## Interface: 16001', '## Interface: 120105')
-    edit('HanseCast.toc', '## Title: Hanse Cast', '## Title: Hanse Cast Retail (Alpha)')
+    edit('HanseCast.toc', '## Title: Hanse Cast', '## Title: Hanse Cast Retail')
     base_version = re.search(r'^## Version: (\S+)', result['HanseCast.toc'].decode(), re.M).group(1)
     edit('HanseCast.toc', '## Version: ' + base_version, '## Version: ' + VERSION)
     edit('Core.lua', 'HC.version = "' + base_version + '"', 'HC.version = "' + VERSION + '"')
@@ -53,7 +53,7 @@ def sources():
     result['CompactUnits.lua'] = text.encode('utf-8')
     edit('App.lua', 'local function Start()', '''local function Start()
     if not HC.RetailSupported() then
-        HC.Print('Retail Alpha: requires WoW Retail 12.1.5 (120105).')
+        HC.Print('Retail: requires WoW Retail 12.1.5 (120105).')
         return
     end''')
     edit('App.lua', 'local unitEvents = {', '''local unitEvents = {

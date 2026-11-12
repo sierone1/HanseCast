@@ -2,6 +2,10 @@
 
 Umfang: Hanse Cast Forever 1.0.8-alpha.1 und Retail 1.0.8-retail-alpha.2. Hanse Mark war nicht Gegenstand dieses Audits.
 
+## Finalisierung nach Nutzerabnahme
+
+Der Nutzer hat Forever Alpha.1 und anschließend die installierte Retail Alpha.2 im Spiel bestätigt. Retail-TOC Alpha.2 wurde separat gelesen. Final vorbereitet: Forever **1.0.8**, Retail **1.0.8-retail**. Gegenüber diesen bestätigten Vorstufen ändern sich nur Versions-/Statusmetadaten und Dokumentation; keine neue Laufzeitfunktion. Die folgenden Auditabschnitte beschreiben den vorherigen Vorabstand und dessen damalige offene Abnahme. Die allgemeine Bestätigung ist keine einzeln protokollierte Prüfung jeder Klasse, jedes Zaubers oder jedes Empower-Randfalls.
+
 ## Befunde und Korrekturen
 
 | Bereich | Befund | Ergebnis |

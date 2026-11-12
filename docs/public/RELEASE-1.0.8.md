@@ -1,6 +1,6 @@
-# Hanse Cast Forever – Update 1.0.8-alpha.1
+# Hanse Cast Forever – Update 1.0.8
 
-Stand: 12.11.2026. Release-Paket vorbereitet; Ingame-Abnahme ausstehend. Für WoW Forever 1.60.1, Interface 16001. Kompakte Ziel-/Fokusleisten erlauben Builds 70862 und 70888.
+Stand: 12.11.2026. Release-Paket vorbereitet; allgemeine Ingame-Abnahme des zugrunde liegenden Alpha.1-Spielcodes durch den Nutzer bestätigt. Für WoW Forever 1.60.1, Interface 16001. Kompakte Ziel-/Fokusleisten erlauben Builds 70862 und 70888.
 
 ## Änderungen gegenüber 1.0.7
 
@@ -13,7 +13,7 @@ Stand: 12.11.2026. Release-Paket vorbereitet; Ingame-Abnahme ausstehend. Für Wo
 
 1. WoW vollständig schließen. Bestehenden Ordner `Interface/AddOns/HanseCast` sowie `WTF/Account/<ACCOUNT>/SavedVariables/HanseCast.lua` und gegebenenfalls `.lua.bak` privat sichern.
 2. Den Ordner `HanseCast` aus dem Forever-ZIP nach `_forever_/Interface/AddOns/` kopieren. Die TOC muss direkt unter `AddOns/HanseCast/HanseCast.toc` liegen. Alte Addonkopien außerhalb von AddOns aufbewahren.
-3. WoW neu starten; `/hansecast status` zeigt `1.0.8-alpha.1`. Das frühere separate Compact Lab deaktivieren.
+3. WoW neu starten; `/hansecast status` zeigt `1.0.8`. Das frühere separate Compact Lab deaktivieren.
 4. Vorhandene Nutzer aktivieren die gewünschte Blizzard-Ausblendung bei Bedarf im Spielermenü. Das Update überschreibt eine bisher deaktivierte Option nicht.
 
 Keine SavedVariables löschen, um neue Defaults zu erzwingen. Für eine isolierte Erstinstallationsprüfung die Einstellungen bei geschlossenem Spiel sichern und vorübergehend aus dem SavedVariables-Ordner nehmen; danach wiederherstellen. Dabei ebenfalls die `.bak` berücksichtigen. Die Einstellungen gelten kontoweit.
@@ -22,8 +22,8 @@ Keine SavedVariables löschen, um neue Defaults zu erzwingen. Für eine isoliert
 
 Spieler-Cast und Kanal starten, abbrechen, unterbrechen und schnell nacheinander ausführen; Blizzard-Rückfall, Kampf, Ziel-/Fokuswechsel, Vorschau, Profile und `/reload` prüfen. Priester: mit aktivierter Zauberautomatik Heil-/Schattenzauber vergleichen, danach mit deaktivierter Automatik die feste Grundoptik prüfen. Erstinstallation getrennt vom Update testen. Weitere Klassenfälle stehen in `AUTO-SPELL-VISUALS.md` im Paket.
 
-Das Paket enthält unveränderten Forever-Spielcode gegenüber der bereits installierten Alpha.1, jetzt zusätzlich Update-Anleitung, Klassenübersicht, Quellenverzeichnis, Lizenz und Credits. Das neue ZIP besitzt deshalb einen neuen Hash. Automatisierte Prüfungen ersetzen keine native Abnahme; Retail ist ein separates Paket.
+Das Paket enthält gegenüber der im Spiel bestätigten Forever Alpha.1 ausschließlich aktualisierte Versionsmetadaten und Dokumentation. Update-Anleitung, Klassenübersicht, Quellenverzeichnis, Lizenz und Credits sind enthalten. Das neue ZIP besitzt deshalb einen neuen Hash. Automatisierte Prüfungen ersetzen keine native Abnahme; Retail ist ein separates Paket.
 
 ## English update notes
 
-Fresh settings select class/spec artwork and enable safe Blizzard player-bar replacement; optional per-spell artwork remains off. Existing account-wide preferences survive the update. Warrior and Rogue cast mappings were added. All nine Forever class defaults are covered by mocked tests. Close WoW, back up the addon and SavedVariables, replace the addon folder, then fully restart. Native acceptance is still pending. This packaging revision adds documentation and licensing files without changing the installed Forever alpha.1 Lua payload.
+Fresh settings select class/spec artwork and enable safe Blizzard player-bar replacement; optional per-spell artwork remains off. Existing account-wide preferences survive the update. Warrior and Rogue cast mappings were added. All nine Forever class defaults are covered by mocked tests. Close WoW, back up the addon and SavedVariables, replace the addon folder, then fully restart. The user confirmed general in-game testing of alpha.1. This final release changes version metadata and documentation; runtime behavior is unchanged.

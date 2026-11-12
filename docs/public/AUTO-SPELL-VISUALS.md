@@ -1,6 +1,6 @@
 # Klassenoptik und optionale Zauberautomatik
 
-Stand 12.11.2026: Forever **1.0.8-alpha.1**, Retail **1.0.8-retail-alpha.2**. Native Abnahme ausstehend.
+Stand 12.11.2026: Forever **1.0.8**, Retail **1.0.8-retail**. Allgemeine Ingame-Prüfung der zugrunde liegenden Forever Alpha.1 und Retail Alpha.2 vom Nutzer bestätigt; nicht jede Klasse/jeder Zauber einzeln protokolliert.
 
 ## Erstinstallation
 

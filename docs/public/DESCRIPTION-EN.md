@@ -1,6 +1,6 @@
 # Hanse Cast – English
 
-Current prerelease: Forever 1.0.8-alpha.1. Fresh settings select spec artwork, enable safe Blizzard player replacement and leave per-spell switching off; existing preferences are preserved. [Update](RELEASE-1.0.8.md). Retail is a [separate build](RETAIL.md). Native acceptance pending.
+Current release: Forever 1.0.8. Fresh settings select spec artwork, enable safe Blizzard player replacement and leave per-spell switching off; existing preferences are preserved. [Update](RELEASE-1.0.8.md). Retail is a [separate build](RETAIL.md). General in-game testing confirmed by the user.
 
 Animated player cast bars and compact target/focus cast bars for **WoW Forever 1.60.1**.
 
@@ -29,10 +29,10 @@ Extract the `HanseCast` folder into `Interface/AddOns`, with `HanseCast.toc` dir
 
 ## Compatibility and limitations
 
-Version **1.0.8-alpha.1**, Forever **1.60.1**, interface **16001**. Compact unit bars currently require build **70862/70888**. Other WoW editions and empowered spells are not supported. No additional library required. German and English UI.
+Version **1.0.8**, Forever **1.60.1**, interface **16001**. Compact unit bars currently require build **70862/70888**. Other WoW editions and empowered spells are not supported. No additional library required. German and English UI.
 
 Unavailable permitted time data is shown as a dash. Player bars require accessible timestamps; supported native duration objects drive unit/GCD timers. Automatic channel ticks are not enabled; channel guides are manual aids. Other cast-bar addons may produce overlapping displays.
 
-56 automated suites exercise simulated interfaces. Updated target/focus bars on build 70888 still need in-game acceptance. This does not guarantee every class, spell or addon combination.
+56 automated suites exercise simulated interfaces. The user confirmed general in-game testing of the current Forever build. This does not guarantee every class, spell or addon combination.
 
 [Source and issue reports](https://github.com/sierone1/HanseCast) · All Rights Reserved. Not affiliated with or endorsed by Blizzard.

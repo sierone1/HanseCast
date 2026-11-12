@@ -1,5 +1,5 @@
 local _, HC = ...
-HC.version = "1.0.8-alpha.1"
+HC.version = "1.0.8"
 -- Release gate, deliberately not a saved setting or profile option.
 HC.unitBarsInDevelopment = true
 HC.defaults = { schema = 3, x = 0, y = -180, width = 300, height = 32, scale = 1,

@@ -1,3 +1,14 @@
+# Hanse Cast 1.0.8 / Retail 1.0.8-retail
+
+Final packages following user-confirmed general in-game tests of Forever alpha.1 and Retail alpha.2. Runtime behavior is unchanged from those tested builds; version/status metadata and documentation are finalized.
+
+- Fresh settings choose class/spec artwork, enable safe Blizzard player-bar replacement and leave optional per-spell switching off. Existing preferences are preserved.
+- Retail has an isolated 13-class catalog and retains Blizzard for Empower and inaccessible channel metadata, including compact target/focus bars.
+- Both ZIPs include installation/update documentation, class coverage, credits and licensing; per-file hash manifests are supplied separately.
+- Native acceptance is general user feedback, not exhaustive class/spell certification.
+
+---
+
 # Retail 1.0.8-retail-alpha.2 / Forever packaging audit
 
 - Retail: compact target/focus bars now retain Blizzard for Empower, inaccessible Empower flags and failed channel metadata. Empower events trigger reconciliation; regression tests cover fallback and recovery.
